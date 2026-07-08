@@ -17,17 +17,17 @@ Secret named `avadhana-postgres-secret` — it is **not** defined in this direct
 must exist in the `avadhana-dev` namespace before applying, or the pod will fail to
 start (`CreateContainerConfigError`).
 
-Proper local secrets tooling (sourcing values from a gitignored `.env`) is tracked in
-issue #50 ("Local secrets management") and isn't built yet. Until then, create the
-secret manually, using the same values as `.env.example` / your local `.env`:
+Create/update it from your local `.env` (see `.env.example` if you don't have one
+yet) using the shared secrets script from issue #50:
 
 ```bash
-kubectl create secret generic avadhana-postgres-secret \
-  --namespace avadhana-dev \
-  --from-literal=POSTGRES_DB=avadhana \
-  --from-literal=POSTGRES_USER=avadhana \
-  --from-literal=POSTGRES_PASSWORD=changeme
+./infra/k8s/scripts/create-secrets.sh
 ```
+
+This also creates/updates `avadhana-app-secret` (used by backend-api and
+ai-coordinator-worker). See `infra/k8s/scripts/README.md` for full details,
+including the idempotent apply pattern and the path to a real secrets manager
+for production. The script is safe to re-run any time you change `.env`.
 
 ## Apply
 

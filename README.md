@@ -13,6 +13,9 @@ The friction is the feature.
 | [`Avadhana_Product_Specification.pdf`](Avadhana_Product_Specification.pdf) | The founding product spec (v1.0): thesis, core mechanics (3-slot system, 90-day lock, problem tiers, roles), user flows, governance, open risks |
 | [`CLAUDE.md`](CLAUDE.md) | Working architecture notes for AI-assisted development — the AI coordination layer (SARVAM AI), problem split/merge mechanics, moderation & appeals, gamification, deployment guidance |
 | [`architecture/`](architecture/) | Draw.io architecture diagrams: system architecture, domain data model, AI coordination flow, problem hierarchy/merge mechanics, user flow, deployment topology, plus detailed per-module ER diagrams — see [`architecture/README.md`](architecture/README.md) |
+| [`services/`](services/) | Backend API, Moderation, AI Coordinator Worker, and a local SARVAM AI mock — one Containerfile per service from day one |
+| [`infra/k8s/`](infra/k8s/) | Kubernetes manifests for local dev (Postgres, Redis, Backend API, AI Coordinator Worker) |
+| [`docs/local-dev.md`](docs/local-dev.md) | Step-by-step local dev setup: Podman install → cluster up → `make dev-up` → verify |
 
 ## Core mechanics (from the spec)
 

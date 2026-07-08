@@ -1,0 +1,52 @@
+# Local dev only — see infra/k8s/backend-api/README.md and CLAUDE.md
+# "Local Development Environment" section. Runs the locally-built
+# avadhana/backend-api:dev image loaded into the kind node (not pulled
+# from any registry — see README for the load command).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-api
+  namespace: avadhana-dev
+  labels:
+    app: backend-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend-api
+  template:
+    metadata:
+      labels:
+        app: backend-api
+    spec:
+      containers:
+        - name: backend-api
+          image: avadhana/backend-api:dev
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: avadhana-backend-api-config
+            - secretRef:
+                name: avadhana-app-secret
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi

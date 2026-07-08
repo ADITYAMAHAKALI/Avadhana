@@ -1,0 +1,19 @@
+# Local dev only — see infra/k8s/backend-api/README.md and CLAUDE.md
+# "Local Development Environment" section. Other services
+# (ai-coordinator-worker, etc.) resolve the Backend API via this Service
+# name: backend-api.avadhana-dev.svc.cluster.local:8000
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-api
+  namespace: avadhana-dev
+  labels:
+    app: backend-api
+spec:
+  type: ClusterIP
+  selector:
+    app: backend-api
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000

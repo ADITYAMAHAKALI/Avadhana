@@ -1,0 +1,20 @@
+# Local dev only — see infra/k8s/ai-coordinator-worker/README.md and CLAUDE.md
+# "Local Development Environment" section. Non-secret config for the AI
+# Coordinator Worker. Secret values (DATABASE_URL, REDIS_URL, JWT_SECRET,
+# SARVAM_API_KEY) come from the avadhana-app-secret Secret instead
+# (see infra/k8s/scripts/create-secrets.sh). REDIS_URL from that Secret is
+# what the worker actually connects to (see .env.example) — this ConfigMap
+# only holds values that are safe to view in plaintext.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: avadhana-ai-coordinator-worker-config
+  namespace: avadhana-dev
+  labels:
+    app: ai-coordinator-worker
+data:
+  ENVIRONMENT: "development"
+  LOG_LEVEL: "debug"
+  SARVAM_API_BASE_URL: "https://api.sarvam.ai"
+  SARVAM_USE_MOCK: "true"
+  AI_COORDINATOR_INVOCATION_INTERVAL_HOURS: "6"

@@ -1,0 +1,18 @@
+# Local dev only — see infra/k8s/backend-api/README.md and CLAUDE.md
+# "Local Development Environment" section. Non-secret config for the
+# Backend API. Secret values (DATABASE_URL, REDIS_URL, JWT_SECRET,
+# SARVAM_API_KEY) come from the avadhana-app-secret Secret instead
+# (see infra/k8s/scripts/create-secrets.sh).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: avadhana-backend-api-config
+  namespace: avadhana-dev
+  labels:
+    app: backend-api
+data:
+  ENVIRONMENT: "development"
+  LOG_LEVEL: "debug"
+  SARVAM_API_BASE_URL: "https://api.sarvam.ai"
+  SARVAM_USE_MOCK: "true"
+  BACKEND_API_PORT: "8000"

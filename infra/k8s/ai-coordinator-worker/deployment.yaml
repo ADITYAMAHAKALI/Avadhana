@@ -1,0 +1,57 @@
+# Local dev only — see infra/k8s/ai-coordinator-worker/README.md and CLAUDE.md
+# "Local Development Environment" / "AI Coordination Architecture" sections.
+#
+# This is a background RQ (Redis Queue) worker, NOT an HTTP server — it pulls
+# jobs off the shared "ai-coordinator" Redis queue and runs them. There is no
+# port to expose and therefore no Service for this workload (see README).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-coordinator-worker
+  namespace: avadhana-dev
+  labels:
+    app: ai-coordinator-worker
+spec:
+  # --- SCALE PATH ---
+  # This `replicas` count is the manual scaling knob referenced in CLAUDE.md's
+  # "AI Coordination Architecture" section (worker runs on a schedule / on
+  # demand, not blocking user requests; add worker replicas as job volume
+  # grows). RQ workers pull jobs off the shared "ai-coordinator" Redis queue,
+  # so multiple replicas naturally load-balance work with no extra config —
+  # bump this number (or `kubectl scale`, see README) to add throughput.
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ai-coordinator-worker
+  template:
+    metadata:
+      labels:
+        app: ai-coordinator-worker
+    spec:
+      containers:
+        - name: ai-coordinator-worker
+          image: avadhana/ai-coordinator-worker:dev
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: avadhana-ai-coordinator-worker-config
+            - secretRef:
+                name: avadhana-app-secret
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          # No HTTP server in this process, so no HTTP liveness/readiness probe.
+          # A basic `exec` liveness probe (process-alive check) is intentionally
+          # skipped for this skeleton: RQ's worker loop has no lightweight
+          # built-in health command, and a naive `pgrep python` check would only
+          # ever prove the process didn't crash outright — it can't detect a
+          # worker that's alive but has silently dropped its Redis connection,
+          # so it adds container-restart churn without real signal. Revisit once
+          # the worker exposes a real health check (e.g. an RQ heartbeat/worker
+          # registration check) alongside the real SARVAM job types
+          # (issues #19-27). Until then, `kubectl logs` / `rq info` against
+          # Redis are the way to check worker health (see README).
