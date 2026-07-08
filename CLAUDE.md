@@ -236,6 +236,15 @@ Focus testing on the constraints:
 - **Checklist generation**: Spot-check that AI checklists are accurate and actionable. Test with real problem discussions, not synthetic data.
 - **Task assignment suggestions**: Verify that proposed assignments consider current commitment load and person's past performance.
 
+## Local Development Environment
+
+**Immediate focus (before any cloud/VPS work): all services run locally on Kubernetes via Podman.** The VPS/Docker Compose deployment described later in this doc and in `architecture/06-deployment-infrastructure.drawio.png` is the eventual production target, not where development starts — track this work under the "Local Kubernetes Dev Environment (Podman)" epic on GitHub.
+
+- Each service (Backend API, AI Coordinator Worker, Moderation) gets its own Containerfile from day one, even before Moderation is actually split out of the Backend API process — this keeps the image-build path consistent and avoids a rework later.
+- Postgres and Redis run as local k8s Deployments/StatefulSets for dev — not representative of the production data tier (which should move to a managed DB service per the scale path).
+- SARVAM AI calls should be stubbable/mockable locally so development and CI don't require live API credentials or burn real cost.
+- Secrets locally come from k8s Secrets sourced from an uncommitted `.env` — same non-negotiable rule as production (see Security section below), just a lighter-weight mechanism for a single dev machine.
+
 ## Security & Solo-Dev Architecture
 
 Because you're building solo initially and security is non-negotiable:
