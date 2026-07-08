@@ -1,0 +1,18 @@
+# Local dev only — matches REDIS_HOST=redis.avadhana-dev.svc.cluster.local
+# in .env.example. Other services (backend-api, ai-coordinator-worker) resolve
+# Redis via this Service name.
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: avadhana-dev
+  labels:
+    app: redis
+spec:
+  type: ClusterIP
+  selector:
+    app: redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379

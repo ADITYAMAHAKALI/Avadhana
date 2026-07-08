@@ -1,0 +1,14 @@
+[project]
+name = "avadhana-sarvam-mock"
+version = "0.1.0"
+description = "Local mock/stub of the SARVAM AI API for Avadhana dev/CI (issue #51). Not the real SARVAM client."
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115,<1.0",
+    "uvicorn[standard]>=0.30,<1.0",
+    "pydantic>=2.7,<3.0",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

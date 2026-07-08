@@ -1,0 +1,18 @@
+# Local dev only — matches POSTGRES_HOST=postgres.avadhana-dev.svc.cluster.local
+# in .env.example. Other services (backend-api, ai-coordinator-worker) resolve
+# Postgres via this Service name.
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: avadhana-dev
+  labels:
+    app: postgres
+spec:
+  type: ClusterIP
+  selector:
+    app: postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
