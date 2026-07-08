@@ -6,8 +6,8 @@ Mirrors the GitHub issue backlog (`ADITYAMAHAKALI/Avadhana`, epics `#3` `#10` `#
 
 ## [Local Kubernetes Dev Environment (Podman)](https://github.com/ADITYAMAHAKALI/Avadhana/issues/39) — start here
 
-- [ ] [Install & configure Podman for local Kubernetes](https://github.com/ADITYAMAHAKALI/Avadhana/issues/40)
-- [ ] [Set up local k8s cluster + kubectl context](https://github.com/ADITYAMAHAKALI/Avadhana/issues/41)
+- [x] [Install & configure Podman for local Kubernetes](https://github.com/ADITYAMAHAKALI/Avadhana/issues/40)
+- [x] [Set up local k8s cluster + kubectl context](https://github.com/ADITYAMAHAKALI/Avadhana/issues/41)
 - [ ] [Containerize Backend API service](https://github.com/ADITYAMAHAKALI/Avadhana/issues/42)
 - [ ] [Containerize AI Coordinator Worker service](https://github.com/ADITYAMAHAKALI/Avadhana/issues/43)
 - [ ] [Containerize Moderation service](https://github.com/ADITYAMAHAKALI/Avadhana/issues/44)

@@ -8,6 +8,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Key reads**: See `Avadhana_Product_Specification.pdf` for the complete specification, including the product thesis, core mechanics, user flows, and open risks.
 
+## Project Tracking
+
+Work is tracked in **GitHub Issues** (`ADITYAMAHAKALI/Avadhana`), not in this file. `TODO.md` mirrors the backlog locally, grouped by epic, for a quick read without leaving the editor. Structure: 7 epics, each with native GitHub sub-issues (real parent/child links, not just checklists):
+
+- **#39 Local Kubernetes Dev Environment (Podman)** — immediate focus, most detailed (15 sub-issues). Start here.
+- **#3** Core Commitment System · **#10** Problem Management & Hierarchy · **#18** AI Coordination Layer (SARVAM) · **#28** Problem-Specific Feed & Interactions · **#35** Gamification & Reputation · **#55** Security & Moderation Safety
+
+Before proposing new work or opening new issues, check the relevant epic first — it likely already has a matching sub-issue.
+
 ## Core Platform Philosophy
 
 The platform's entire design is built around a single contrarian bet: that focused commitment produces outcomes, while frictionless breadth produces spectators.
