@@ -1,0 +1,32 @@
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--color-ink-muted);
+  text-transform: uppercase;
+}
+
+.title {
+  font-weight: 600;
+  font-size: 32px;
+  letter-spacing: -0.02em;
+  margin: 8px 0 0;
+}
+
+.subtitle {
+  font-size: 15px;
+  color: var(--color-ink-60);
+  margin: 6px 0 0;
+  max-width: 640px;
+}
+
+.actions {
+  flex: none;
+}

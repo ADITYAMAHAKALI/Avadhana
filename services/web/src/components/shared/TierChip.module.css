@@ -1,0 +1,15 @@
+.chip {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  display: inline-block;
+  line-height: 1.4;
+}
+
+.tierS { color: #fff; background: var(--color-tier-s); }
+.tierA { color: #fff; background: var(--color-tier-a); }
+.tierB { color: #fff; background: var(--color-tier-b); }
+.tierC { color: #fff; background: var(--color-tier-c); }
+.tierD { color: var(--color-tier-d-text); background: var(--color-tier-d); }

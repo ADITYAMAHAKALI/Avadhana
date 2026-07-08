@@ -1,0 +1,233 @@
+.header {
+  background: var(--color-primary);
+  color: var(--color-surface);
+  padding: 24px 28px;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.2em;
+  color: var(--color-gold-accent);
+}
+
+.headerTitle {
+  font-weight: 600;
+  font-size: 20px;
+  margin-top: 8px;
+}
+
+.headerBody {
+  font-size: 13px;
+  color: var(--color-sidebar-text-muted);
+  margin-top: 4px;
+}
+
+.body {
+  padding: 26px 28px;
+}
+
+.stepLabel {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: var(--color-ink-muted);
+  text-transform: uppercase;
+}
+
+.roleList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.roleCard {
+  background: var(--color-surface-white);
+  border: 1.5px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  padding: 15px 18px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.roleCardSelected {
+  background: var(--color-saffron-tint);
+  border-color: var(--color-saffron);
+}
+
+.roleCardHead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.roleDot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-pill);
+  flex: none;
+}
+
+.roleDotThinker {
+  background: var(--color-thinker);
+}
+
+.roleDotActor {
+  background: var(--color-actor);
+}
+
+.roleDotBacker {
+  background: var(--color-backer);
+}
+
+.roleName {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.roleDesc {
+  font-size: 13px;
+  color: var(--color-ink-60);
+  margin-top: 6px;
+}
+
+.specRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 11px;
+}
+
+.specChip {
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 7px 13px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  color: var(--color-actor-text);
+  background: var(--color-actor-tint);
+  border: 1px solid var(--color-actor-tint-border);
+  transition: all 0.15s;
+}
+
+.specChipSelected {
+  color: #fff;
+  background: var(--color-actor);
+  border-color: var(--color-actor);
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.cancelButton {
+  flex: 1;
+  font-family: inherit;
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--color-ink-60);
+  background: transparent;
+  border: 1px solid var(--color-line-strong);
+  padding: 12px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.backButton {
+  flex: none;
+  font-family: inherit;
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--color-ink-60);
+  background: transparent;
+  border: 1px solid var(--color-line-strong);
+  padding: 12px 18px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.nextButton {
+  flex: 2;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 14px;
+  color: #fff;
+  background: var(--color-saffron);
+  border: none;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.nextButtonDisabled {
+  color: #b0a794;
+  background: #efe7d8;
+  cursor: not-allowed;
+}
+
+.commitButton {
+  flex: 1;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 14px;
+  color: #fff;
+  background: var(--color-saffron);
+  border: none;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.confirmCard {
+  display: flex;
+  gap: 22px;
+  align-items: center;
+  margin-top: 18px;
+  background: var(--color-surface-white);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+
+.confirmText {
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--color-ink-70);
+}
+
+.confirmNote {
+  color: var(--color-ink-80);
+  margin-top: 6px;
+}
+
+.confirmWarning {
+  color: var(--color-abandoned);
+  margin-top: 4px;
+}
+
+.ackRow {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-top: 16px;
+  font-size: 13.5px;
+  color: var(--color-ink-70);
+  cursor: pointer;
+}
+
+.ackCheck {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  background: var(--color-saffron);
+  color: #fff;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  margin-top: 1px;
+}

@@ -1,6 +1,6 @@
 # Avadhana — Build Checklist
 
-Mirrors the GitHub issue backlog (`ADITYAMAHAKALI/Avadhana`, epics `#3` `#10` `#18` `#28` `#35` `#39` `#55`) so progress can be tracked here or on GitHub. Check items off in either place — GitHub is the source of truth for status; this file is for a quick local read.
+Mirrors the GitHub issue backlog (`ADITYAMAHAKALI/Avadhana`, epics `#3` `#10` `#18` `#28` `#35` `#39` `#55` `#60`) so progress can be tracked here or on GitHub. Check items off in either place — GitHub is the source of truth for status; this file is for a quick local read.
 
 **Immediate focus**: get every service running locally on Kubernetes via Podman before any cloud/VPS work. Start with the Local Kubernetes Dev Environment section below.
 
@@ -82,3 +82,9 @@ Rewards follow-through, not activity — do not build a second engagement-farmin
 - [ ] [Immutable audit logging for moderation actions](https://github.com/ADITYAMAHAKALI/Avadhana/issues/57)
 - [ ] [Appeal fraud throttling](https://github.com/ADITYAMAHAKALI/Avadhana/issues/58)
 - [ ] [Human override for moderators](https://github.com/ADITYAMAHAKALI/Avadhana/issues/59)
+
+## [Web Frontend (React)](https://github.com/ADITYAMAHAKALI/Avadhana/issues/60)
+
+`services/web/` — React + TS + Vite, ported from the Claude Design mockup. Mock data layer behind ports until backend domain endpoints exist (issues #4-17).
+
+- [x] [Implement Avadhana Web app shell from Claude Design mockup](https://github.com/ADITYAMAHAKALI/Avadhana/issues/61)

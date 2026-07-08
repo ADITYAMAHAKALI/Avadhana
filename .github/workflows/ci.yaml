@@ -1,0 +1,80 @@
+# CI: build & validate container images + manifests (issue #53)
+#
+# What this validates and why:
+#   - build-images: every service under services/<name>/ ships its own
+#     Containerfile from day one (see CLAUDE.md "Local Development
+#     Environment" — this convention holds even before a service like
+#     Moderation is actually split out of the Backend API process, to keep
+#     the image-build path consistent). This job matrix-builds each
+#     Containerfile with plain `docker build` to catch broken builds
+#     (missing files, bad pip pins, syntax errors) before merge. No image
+#     is pushed to any registry — this is build validation only, not
+#     release publishing.
+#   - validate-manifests: all k8s manifests under infra/k8s/**/*.yaml are
+#     schema-validated with kubeconform against the Kubernetes OpenAPI
+#     schema, so malformed/invalid manifests (bad apiVersion, missing
+#     required fields, typos) are caught on every PR. The glob is
+#     intentionally generic (infra/k8s/**/*.yaml) rather than a hardcoded
+#     per-service list, so new manifest directories (e.g. backend-api,
+#     ai-coordinator-worker) are picked up automatically as they land.
+#
+# Runs on every PR (the ask in #53) and also on push to main, so a direct
+# push or a merge commit to main gets the same build/validate signal a PR
+# would have gotten — cheap insurance since both jobs are fast and neither
+# publishes anything.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  build-images:
+    name: build (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - backend-api
+          - moderation
+          - ai-coordinator-worker
+          - sarvam-mock
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build ${{ matrix.service }} image
+        run: |
+          docker build \
+            -f services/${{ matrix.service }}/Containerfile \
+            -t avadhana/${{ matrix.service }}:ci \
+            services/${{ matrix.service }}/
+
+  validate-manifests:
+    name: validate k8s manifests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install kubeconform
+        run: |
+          curl -sSL -o kubeconform.tar.gz \
+            https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz
+          tar -xzf kubeconform.tar.gz kubeconform
+          chmod +x kubeconform
+          sudo mv kubeconform /usr/local/bin/kubeconform
+          kubeconform -v
+
+      - name: Validate infra/k8s manifests
+        run: |
+          shopt -s globstar nullglob
+          files=(infra/k8s/**/*.yaml)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No manifests found under infra/k8s/**/*.yaml — nothing to validate."
+            exit 0
+          fi
+          echo "Validating: ${files[*]}"
+          kubeconform -strict -summary "${files[@]}"

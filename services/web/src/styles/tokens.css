@@ -1,0 +1,81 @@
+/*
+ * Design tokens sourced from the "Avadhana Design System" Claude Design
+ * project (project 01cd5424-5c22-455d-b4d5-657917bb8ffd, Design System.dc.html).
+ * Keep in sync with that file if the design system changes.
+ */
+:root {
+  /* Foundation */
+  --color-paper: #E9E3D7;
+  --color-surface: #FCFAF5;
+  --color-surface-white: #FFFFFF;
+  --color-line: #E4DDD0;
+  --color-line-strong: #C8BFAE;
+  --color-ink-60: #57514A;
+  --color-ink-70: #3B372F;
+  --color-ink-80: #8A8073;
+  --color-ink-muted: #9A8E77;
+  --color-ink: #1E1B16;
+
+  /* Brand & semantic */
+  --color-primary: #1B2233;
+  --color-primary-2: #2E3A56;
+  --color-primary-nav-active: #2A3550;
+  --color-saffron: #C67C1E;
+  --color-saffron-dark: #A9752A;
+  --color-saffron-tint: #FBF1E1;
+  --color-saffron-tint-border: #E9CE9F;
+  --color-resolved: #3F7A52;
+  --color-abandoned: #B4472F;
+  --color-abandoned-tint: #FCF3F0;
+  --color-abandoned-tint-border: #EAD2CB;
+  --color-gold-accent: #C89B5A;
+
+  /* Thinker / Actor / Backer role colors */
+  --color-thinker: #4B57A6;
+  --color-thinker-tint: #ECEEF9;
+  --color-thinker-tint-border: #DAD3E6;
+  --color-thinker-text: #3A4487;
+  --color-actor: #2F7D6B;
+  --color-actor-tint: #E4F1ED;
+  --color-actor-tint-border: #BFE0D6;
+  --color-actor-text: #1F5F51;
+  --color-backer: #B07A22;
+  --color-backer-tint: #F6ECD9;
+  --color-backer-text: #8A5E14;
+
+  /* Tier scale S -> D (severity by ink depth) */
+  --color-tier-s: #212B41;
+  --color-tier-a: #3C4A6B;
+  --color-tier-b: #5E6E93;
+  --color-tier-c: #8A97B4;
+  --color-tier-d: #B4BCCE;
+  --color-tier-d-text: #26314A;
+
+  /* Sidebar (dark) */
+  --color-sidebar-bg: #1B2233;
+  --color-sidebar-text: #E8E4DA;
+  --color-sidebar-text-muted: #9AA0B2;
+  --color-sidebar-text-dim: #7C8296;
+  --color-sidebar-border: rgba(255, 255, 255, 0.08);
+
+  /* Typography */
+  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-devanagari: 'IBM Plex Sans Devanagari', sans-serif;
+  --font-serif: 'IBM Plex Serif', serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+
+  /* Radii */
+  --radius-sm: 7px;
+  --radius-md: 9px;
+  --radius-lg: 14px;
+  --radius-xl: 16px;
+  --radius-pill: 999px;
+
+  /* Spacing scale (used sparingly; most layout uses explicit px to match design) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 22px;
+  --space-6: 28px;
+}

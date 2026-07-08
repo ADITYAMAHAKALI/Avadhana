@@ -1,0 +1,44 @@
+@import './tokens.css';
+
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-paper);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  color: var(--color-ink);
+}
+
+a {
+  color: var(--color-primary-2);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--color-saffron);
+}
+
+button {
+  font-family: inherit;
+}
+
+::selection {
+  background: #F0DFC0;
+}
+
+.scrolly::-webkit-scrollbar {
+  width: 10px;
+}
+
+.scrolly::-webkit-scrollbar-thumb {
+  background: #CFC7B7;
+  border-radius: 10px;
+  border: 3px solid var(--color-paper);
+}

@@ -1,0 +1,69 @@
+.card {
+  margin-top: 28px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--color-sidebar-border);
+  border-radius: var(--radius-lg);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--color-sidebar-text-muted);
+  text-transform: uppercase;
+}
+
+.count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-gold-accent);
+}
+
+.slots {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.slotFilled,
+.slotOpen {
+  flex: 1;
+  height: 46px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.slotFilled {
+  background: rgba(198, 124, 30, 0.16);
+  border: 1px solid rgba(198, 124, 30, 0.5);
+}
+
+.slotDot {
+  width: 9px;
+  height: 9px;
+  border-radius: var(--radius-pill);
+  background: #E0952F;
+}
+
+.slotOpen {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed rgba(255, 255, 255, 0.22);
+  color: var(--color-sidebar-text-dim);
+  font-size: 18px;
+}
+
+.hint {
+  font-size: 11.5px;
+  color: var(--color-sidebar-text-muted);
+  line-height: 1.5;
+  margin-top: 12px;
+}

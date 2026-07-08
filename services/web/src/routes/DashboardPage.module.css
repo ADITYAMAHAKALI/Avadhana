@@ -1,0 +1,183 @@
+.page {
+  padding: 40px 48px 60px;
+}
+
+.date {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--color-ink-muted);
+  text-transform: uppercase;
+}
+
+.title {
+  font-weight: 600;
+  font-size: 32px;
+  letter-spacing: -0.02em;
+  margin: 8px 0 0;
+}
+
+.subtitle {
+  font-size: 15px;
+  color: var(--color-ink-60);
+  margin: 6px 0 0;
+}
+
+.checkpoint {
+  margin-top: 26px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--color-saffron-tint);
+  border: 1px solid var(--color-saffron-tint-border);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+}
+
+.checkpointBar {
+  width: 8px;
+  height: 44px;
+  border-radius: 8px;
+  background: var(--color-saffron);
+  flex: none;
+}
+
+.checkpointBody {
+  flex: 1;
+}
+
+.checkpointTitle {
+  font-weight: 600;
+  font-size: 14.5px;
+  color: var(--color-ink);
+}
+
+.checkpointMeta {
+  font-size: 13px;
+  color: var(--color-backer-text);
+  margin-top: 2px;
+}
+
+.reviewButton {
+  font-family: inherit;
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--color-backer-text);
+  background: transparent;
+  border: 1px solid #e0be83;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 18px;
+  margin-top: 22px;
+}
+
+.card {
+  background: var(--color-surface-white);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-xl);
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+}
+
+.cardTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.cardTitle {
+  font-weight: 600;
+  font-size: 16.5px;
+  line-height: 1.3;
+  margin-top: 14px;
+}
+
+.cardMeta {
+  font-size: 12.5px;
+  color: var(--color-ink-80);
+  margin-top: 5px;
+}
+
+.roleRow {
+  align-self: flex-start;
+  margin-top: 12px;
+}
+
+.cardFooter {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #f0ebe0;
+}
+
+.footerLabel {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--color-ink-muted);
+}
+
+.footerTask {
+  font-size: 13.5px;
+  color: var(--color-ink-70);
+  margin-top: 5px;
+}
+
+.openSlotCard {
+  background: #f6f2ea;
+  border: 1px dashed var(--color-line-strong);
+  border-radius: var(--radius-xl);
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  cursor: pointer;
+  min-height: 260px;
+  text-decoration: none;
+  transition: border-color 0.18s, background 0.18s;
+}
+
+.openSlotCard:hover {
+  background: #f1ebdd;
+  border-color: var(--color-ink-muted);
+}
+
+.openSlotIcon {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-pill);
+  border: 1px dashed #c0b7a4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #b0a794;
+  font-size: 26px;
+}
+
+.openSlotTitle {
+  font-weight: 600;
+  font-size: 15px;
+  margin-top: 16px;
+  color: var(--color-ink);
+}
+
+.openSlotBody {
+  font-size: 13px;
+  color: var(--color-ink-80);
+  line-height: 1.5;
+  margin-top: 6px;
+  max-width: 180px;
+}
+
+.openSlotCard :global(button) {
+  margin-top: 16px;
+  pointer-events: none;
+}

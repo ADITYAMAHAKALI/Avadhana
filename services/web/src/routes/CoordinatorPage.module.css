@@ -1,0 +1,204 @@
+.page {
+  padding: 40px 48px 60px;
+}
+
+.statRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-top: 26px;
+}
+
+.statCard {
+  background: var(--color-surface-white);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+}
+
+.statNumber {
+  font-family: var(--font-mono);
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.statNumberFlagged {
+  color: var(--color-saffron);
+}
+
+.statNumberAppeal {
+  color: var(--color-thinker);
+}
+
+.statLabel {
+  font-size: 12.5px;
+  color: var(--color-ink-60);
+  margin-top: 2px;
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 18px;
+  margin-top: 22px;
+  align-items: start;
+}
+
+.sectionLabel {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: var(--color-ink-muted);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.queueList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.queueCard {
+  background: var(--color-surface-white);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+}
+
+.queueCardTop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pillFlagged {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-saffron-dark);
+  background: var(--color-saffron-tint);
+  border: 1px solid var(--color-saffron-tint-border);
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+}
+
+.pillBlocked {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-abandoned);
+  background: var(--color-abandoned-tint);
+  border: 1px solid var(--color-abandoned-tint-border);
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+}
+
+.confidence {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-ink-80);
+}
+
+.timeAgo {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--color-ink-muted);
+  margin-left: auto;
+}
+
+.body {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-ink-70);
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: var(--color-paper);
+  border-radius: 10px;
+  border-left: 3px solid var(--color-saffron-tint-border);
+}
+
+.bodyBlocked {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-ink-80);
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: var(--color-paper);
+  border-radius: 10px;
+  border-left: 3px solid var(--color-abandoned-tint-border);
+}
+
+.authorLine {
+  font-size: 12.5px;
+  color: var(--color-ink-80);
+  margin-top: 8px;
+}
+
+.appealFiled {
+  color: var(--color-saffron);
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.upholdBtn {
+  background: var(--color-abandoned);
+}
+
+.allowBtn {
+  color: var(--color-actor-text);
+  background: var(--color-actor-tint);
+  border: 1px solid var(--color-actor-tint-border);
+}
+
+.logCard {
+  background: var(--color-surface-white);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  padding: 6px 0;
+}
+
+.logRow {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.logRow:last-child {
+  border-bottom: none;
+}
+
+.logRowTop {
+  display: flex;
+  justify-content: space-between;
+}
+
+.logType {
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.logTime {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--color-ink-muted);
+}
+
+.logDetail {
+  font-size: 12px;
+  color: var(--color-ink-80);
+  margin-top: 3px;
+}
+
+.calibrationNote {
+  background: var(--color-thinker-tint);
+  border: 1px solid var(--color-thinker-tint-border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  margin-top: 14px;
+  font-size: 12.5px;
+  color: var(--color-ink-70);
+  line-height: 1.55;
+}
