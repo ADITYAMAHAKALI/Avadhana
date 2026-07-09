@@ -159,17 +159,17 @@ Not yet tracked as individual GitHub issues — derived from CLAUDE.md's Securit
 
 Not yet tracked as individual GitHub issues — derived from CLAUDE.md's Testing & Verification Strategy. File issues under the relevant epic if adopted.
 
-- [ ] Slot system: a 4th commitment attempt is blocked with a clear error, not soft discouragement
-- [ ] 90-day lock: a commitment cannot be freed before day 90; no code path bypasses it
-- [ ] 90-day checkpoint flow: resolve / abandon / continue all tested, including edge cases (exactly day 90, timezone handling)
-- [ ] Commitment-gated voice: non-committed readers can read/share but cannot comment/vote; committed members can
-- [ ] Abandoned status is visible on the abandoning user's profile and is not reversible after the fact
+- [x] Slot system: a 4th commitment attempt is blocked with a clear error, not soft discouragement — automated test + verified live (409 `SLOT_LIMIT_EXCEEDED`)
+- [x] 90-day lock: a commitment cannot be freed before day 90; no code path bypasses it — automated tests at day-89/90/91 boundaries
+- [ ] 90-day checkpoint flow: resolve / abandon / continue all tested, including edge cases (exactly day 90, timezone handling) — resolve/abandon/continue are automated-tested on the backend (UTC); frontend timezone-display edge cases (DST, non-UTC users) haven't been specifically tested
+- [x] Commitment-gated voice: non-committed readers can read/share but cannot comment/vote; committed members can — automated tests + verified live (401/403/200 matrix)
+- [x] Abandoned status is visible on the abandoning user's profile and is not reversible after the fact — surfaced via commitment-history on the Profile page; no endpoint exists to reverse a checkpoint decision
 - [ ] Tier reclassification requires threshold agreement and stays lightweight to propose (once built, post-v1)
 - [ ] Problem merge: conflict detection (same task in both, conflicting role assignments) and human resolution flow (once built, post-v1)
 - [ ] Off-topic detection precision/recall measured against a labeled test set per problem type; false-positive rate is the metric to protect (once built, post-v1)
 - [ ] Appeal flow tracked end-to-end and feeds calibration data (once built, post-v1)
-- [ ] CI runs unit + integration tests on every PR; container images and k8s manifests validate (already true per `#53` — keep enforcing as services gain real logic)
-- [ ] End-to-end test of the full SLC v1 loop: sign up → commit → post as committed member → hit checkpoint
+- [x] CI runs unit + integration tests on every PR; container images and k8s manifests validate — `test-backend-api` and `test-ai-coordinator-worker` jobs added alongside `build-images`/`validate-manifests`/`validate-compose`
+- [ ] End-to-end test of the full SLC v1 loop: sign up → commit → post as committed member → hit checkpoint — exercised manually (curl/Node scripts) during this session's verification passes, but no automated E2E suite (e.g. Playwright against the deployed stack, per `docs/testing-strategy.md`'s recommendation) exists yet
 
 ## Marketing & Launch
 
