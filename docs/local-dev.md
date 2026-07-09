@@ -44,8 +44,8 @@ This one command (see the root `Makefile`, issue #52):
 3. Generates k8s Secrets (`avadhana-postgres-secret`, `avadhana-app-secret`) from your local `.env` via `infra/k8s/scripts/create-secrets.sh` — safe to re-run any time you edit `.env`.
 4. Applies the Postgres and Redis manifests and waits for both to be ready.
 5. Builds every service's container image with Podman (`backend-api`, `moderation`, `ai-coordinator-worker`, `sarvam-mock`).
-6. Loads the images that have k8s manifests (`backend-api`, `ai-coordinator-worker`) into the kind node — `moderation` and `sarvam-mock` build and run standalone for now but aren't deployed into the cluster yet (no manifest exists for either; `moderation` isn't split out of the backend yet, and nothing calls `sarvam-mock` until the real SARVAM client lands in issue #19).
-7. Applies the Backend API and AI Coordinator Worker manifests and waits for both to be ready.
+6. Loads the images that have k8s manifests (`backend-api`, `ai-coordinator-worker`, `sarvam-mock`) into the kind node — `moderation` still builds and runs standalone for now (no manifest yet; it isn't split out of the backend yet).
+7. Applies the Backend API, AI Coordinator Worker, and SARVAM mock manifests and waits for all three to be ready.
 
 Takes a few minutes on first run (image builds, cluster bootstrap); subsequent runs are much faster since Podman caches image layers and `kind create cluster` / `kubectl apply` are no-ops if the cluster/resources already exist.
 
@@ -55,7 +55,7 @@ Takes a few minutes on first run (image builds, cluster bootstrap); subsequent r
 make dev-status
 ```
 
-Expect four pods `Running`: `postgres-0`, `redis-...`, `backend-api-...`, `ai-coordinator-worker-...`.
+Expect five pods `Running`: `postgres-0`, `redis-...`, `backend-api-...`, `ai-coordinator-worker-...`, `sarvam-mock-...`.
 
 Reach the Backend API from your host:
 

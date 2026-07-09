@@ -1,0 +1,53 @@
+# Local dev only — see infra/k8s/sarvam-mock/README.md and CLAUDE.md
+# "Local Development Environment" section. Runs the locally-built
+# avadhana/sarvam-mock:dev image loaded into the kind node (not pulled
+# from any registry — see README for the load command).
+#
+# Added alongside issue #19 (real SARVAM AI client): the ai-coordinator-worker
+# now actually calls this service (via `SARVAM_MOCK_BASE_URL`, see
+# services/ai-coordinator-worker/sarvam_config.py) whenever SARVAM_USE_MOCK=true,
+# so it needs to be reachable in-cluster. Before #19 landed, nothing called it
+# and no manifest existed for it (see services/sarvam-mock/README.md history).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sarvam-mock
+  namespace: avadhana-dev
+  labels:
+    app: sarvam-mock
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sarvam-mock
+  template:
+    metadata:
+      labels:
+        app: sarvam-mock
+    spec:
+      containers:
+        - name: sarvam-mock
+          image: avadhana/sarvam-mock:dev
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi

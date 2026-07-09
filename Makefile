@@ -12,9 +12,10 @@ NAMESPACE := avadhana-dev
 KIND_CONTEXT := kind-$(CLUSTER_NAME)
 export KIND_EXPERIMENTAL_PROVIDER := podman
 
-# Services with a k8s Deployment (excludes sarvam-mock, which has no
-# manifest yet — nothing in-cluster calls it until issue #19 lands).
-DEPLOYED_SERVICES := backend-api ai-coordinator-worker
+# Services with a k8s Deployment. sarvam-mock joined this list once issue
+# #19 (real SARVAM AI client) landed — ai-coordinator-worker now calls it
+# in-cluster whenever SARVAM_USE_MOCK=true.
+DEPLOYED_SERVICES := backend-api ai-coordinator-worker sarvam-mock
 # All buildable services, deployed or not — kept in sync with .github/workflows/ci.yaml's build matrix.
 ALL_SERVICES := backend-api moderation ai-coordinator-worker sarvam-mock
 
@@ -89,5 +90,7 @@ load-images:
 apply-apps:
 	kubectl apply -f infra/k8s/backend-api/
 	kubectl apply -f infra/k8s/ai-coordinator-worker/
+	kubectl apply -f infra/k8s/sarvam-mock/
 	kubectl rollout status deployment/backend-api -n $(NAMESPACE) --timeout=120s
 	kubectl rollout status deployment/ai-coordinator-worker -n $(NAMESPACE) --timeout=120s
+	kubectl rollout status deployment/sarvam-mock -n $(NAMESPACE) --timeout=120s

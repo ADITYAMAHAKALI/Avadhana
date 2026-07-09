@@ -1,11 +1,17 @@
 [project]
 name = "avadhana-ai-coordinator-worker"
 version = "0.1.0"
-description = "Avadhana AI Coordinator Worker — minimal RQ job-queue skeleton pending real SARVAM AI integration (see issues #19-27)."
+description = "Avadhana AI Coordinator Worker — RQ job-queue with a real SARVAM AI client (issue #19); real coordination jobs (summarize/checklist/off-topic) pending (issues #20-27)."
 requires-python = ">=3.12"
 dependencies = [
     "rq>=1.16,<2.0",
     "redis>=5.0,<6.0",
+    "httpx>=0.27,<1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0,<9.0",
 ]
 
 [build-system]

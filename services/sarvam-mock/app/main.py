@@ -12,13 +12,14 @@ on it (summarization #20, checklist generation #21, off-topic detection
 #22) have something locally reachable to point at, with a roughly
 compatible request/response shape.
 
-IMPORTANT: The exact SARVAM API schema here is a best-effort guess based
-on the general shape of chat-completions + embeddings APIs (SARVAM's
-public docs describe an OpenAI-compatible-ish surface). This has NOT been
-verified against live SARVAM docs/responses. When the real client is
-built (issue #19), re-verify field names and response shapes against
-https://docs.sarvam.ai/ and adjust this mock (and the client) together
-if they've drifted. See README.md for the full list of assumptions.
+IMPORTANT: this mock's schema was verified against live SARVAM docs while
+building the real client (issue #19,
+`services/ai-coordinator-worker/impl/sarvam_client.py`). Chat completions
+match closely; the auth header name does NOT (`api-subscription-key`, not
+`Authorization: Bearer` — this mock still accepts anything, real callers
+should not rely on that). The `/v1/embeddings` endpoint below is
+**mock-only** — SARVAM AI's real API has no embeddings endpoint at all.
+See README.md "Assumptions & known gaps" for the full record.
 """
 
 import hashlib

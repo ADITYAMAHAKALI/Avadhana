@@ -16,5 +16,7 @@ data:
   ENVIRONMENT: "development"
   LOG_LEVEL: "debug"
   SARVAM_API_BASE_URL: "https://api.sarvam.ai"
+  SARVAM_MOCK_BASE_URL: "http://sarvam-mock.avadhana-dev.svc.cluster.local:8080"
+  SARVAM_CHAT_MODEL: "sarvam-105b"
   SARVAM_USE_MOCK: "true"
   AI_COORDINATOR_INVOCATION_INTERVAL_HOURS: "6"

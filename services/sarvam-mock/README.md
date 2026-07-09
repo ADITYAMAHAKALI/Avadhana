@@ -110,25 +110,37 @@ useful for locally exercising similarity / merge-conflict-detection logic
 `CLAUDE.md`) with stable, repeatable fixtures, even though the vectors
 carry no real semantic content.
 
-## Assumptions & known gaps (read before building the real client)
+## Assumptions & known gaps (verified against live docs in issue #19)
 
-This mock's schema is a **best-effort guess**, not a verified match against
-live SARVAM AI docs — the environment this was built in did not have
-access to fetch/verify https://docs.sarvam.ai/ against a live API. Before
-or while building the real client in issue #19:
+This mock's `/v1/chat/completions` shape was a guess, later checked against
+SARVAM's live API reference and OpenAPI spec (https://docs.sarvam.ai/)
+while building the real client (`services/ai-coordinator-worker/impl/sarvam_client.py`,
+issue #19). Findings:
 
-- Confirm the actual SARVAM endpoint paths (`/v1/chat/completions` and
-  `/v1/embeddings` are guesses based on the common OpenAI-compatible
-  convention SARVAM's docs are described as following).
-- Confirm exact request/response field names — SARVAM may use different
-  field names, nested differently, or return extra required fields.
-- Confirm authentication header shape (this mock does not check for or
-  require any `Authorization` / API key header at all — anything is
-  accepted, since the point is to avoid needing live credentials locally).
-- Confirm real embedding dimensionality per model (this mock hardcodes 384).
-- If the real API's shape drifts meaningfully from this mock, update
-  `app/main.py` here to match, so local dev/CI stays representative of
-  production behavior.
+- **Chat completions**: `POST /v1/chat/completions` and the
+  request/response shape modeled here (`messages`, `choices[0].message`,
+  `usage.{prompt,completion}_tokens`) are confirmed close to the real API.
+  Real models are `sarvam-30b` and `sarvam-105b` — this mock accepts any
+  `model` string, so it doesn't need to know the real values, but the real
+  client defaults to `sarvam-105b`.
+- **Auth header**: the real API requires `api-subscription-key: <key>`
+  (**not** `Authorization: Bearer`). This mock still does not check for or
+  require any header at all — anything is accepted, since the point is to
+  avoid needing live credentials locally. The real client
+  (`impl/sarvam_client.py`) sends the correct header name.
+- **Embeddings — NOT REAL**: SARVAM AI's public API has **no embeddings
+  endpoint**. `POST /v1/embeddings` here is **mock-only** — it does not
+  correspond to anything in the real SARVAM API and the real client does
+  not implement it. It's kept as a local fixture for exercising
+  similarity/merge-conflict-detection code *shapes* (CLAUDE.md's "Problem
+  Hierarchy & Merging"), but that feature will need a different real
+  strategy (e.g. deriving similarity via chat-completion prompts with
+  structured output, or a different embeddings provider) before it can
+  work against production. Don't assume this endpoint has a real backing
+  API — it's flagged here so nobody builds production logic against it by
+  mistake.
+- Real embedding dimensionality (previous open question) is now moot given
+  the point above — no real SARVAM embedding model exists to match against.
 
 ## Wiring to `.env.example`
 
