@@ -16,9 +16,9 @@ Build order:
 4. [x] Commitment-gated authorization middleware ([#8](https://github.com/ADITYAMAHAKALI/Avadhana/issues/8))
 5. [ ] 90-day checkpoint job + UI flow ([#7](https://github.com/ADITYAMAHAKALI/Avadhana/issues/7)) — backend done, no frontend screen yet
 6. [x] CommitmentCheckpoint audit log ([#9](https://github.com/ADITYAMAHAKALI/Avadhana/issues/9))
-7. [x] Problem schema + creation flow ([#11](https://github.com/ADITYAMAHAKALI/Avadhana/issues/11)) — tier set once at creation, no reclassification yet
+7. [ ] Problem schema + creation flow ([#11](https://github.com/ADITYAMAHAKALI/Avadhana/issues/11)) — backend done (tier set once at creation, no reclassification yet); no frontend creation screen yet
 8. [ ] Problem search & discovery ([#13](https://github.com/ADITYAMAHAKALI/Avadhana/issues/13)) — backend filters done, Discover page UI not wired to them yet
-9. [ ] Feed core: post / comment / like ([#29](https://github.com/ADITYAMAHAKALI/Avadhana/issues/29)) — post/like done end-to-end, comment UI still missing
+9. [ ] Feed core: post / comment / like ([#29](https://github.com/ADITYAMAHAKALI/Avadhana/issues/29)) — backend done and verified live; frontend is read-only, no compose/like/comment UI yet
 10. [x] Share, open/non-gated ([#30](https://github.com/ADITYAMAHAKALI/Avadhana/issues/30))
 11. [x] Wire the web frontend off mock data onto the endpoints above (routes already scaffolded: Login, Signup, Dashboard, Discover, Problem, Profile) — real ports live behind `VITE_API_BASE_URL`, mock stays default for zero-setup `npm run dev`
 12. [x] Reputation score computation ([#37](https://github.com/ADITYAMAHAKALI/Avadhana/issues/37)), tied to checkpoint events
@@ -68,7 +68,7 @@ User, focus slots, commitments, 90-day lock.
 
 Problems, tiers, search, split/merge.
 
-- [x] [Problem schema + creation flow](https://github.com/ADITYAMAHAKALI/Avadhana/issues/11) — SLC v1 — minimal schema (title/summary/location/category/tier), no hierarchy yet (`parentProblemTitle` hardcoded null); wired end-to-end in the web frontend
+- [ ] [Problem schema + creation flow](https://github.com/ADITYAMAHAKALI/Avadhana/issues/11) — SLC v1 — backend done (`POST /problems`, minimal schema, no hierarchy yet — `parentProblemTitle` hardcoded null) and verified live; **frontend has no problem-creation screen at all yet** — this was previously marked done in error, corrected 2026-07-09
 - [ ] [Tier classification rubric (S–D)](https://github.com/ADITYAMAHAKALI/Avadhana/issues/12) — SLC v1 (needed to set tier at creation) — the tier field itself works (accepts S/A/B/C/D at creation), but no concrete rubric doc (hour/funding thresholds per tier) exists yet, so classification is still subjective per-user judgment — see CLAUDE.md "Known Unknowns" #4
 - [ ] [Problem search & discovery](https://github.com/ADITYAMAHAKALI/Avadhana/issues/13) — SLC v1 — backend done (`GET /problems` with `q`/`tier`/`location`/`category` filters); DiscoverPage's filter UI is still presentational-only, not wired to the real query params yet
 - [ ] [Tier reclassification governance flow](https://github.com/ADITYAMAHAKALI/Avadhana/issues/14) — post-v1
@@ -92,7 +92,7 @@ Summarization, checklist generation, off-topic detection, moderation. Deferred u
 
 ## [Problem-Specific Feed & Interactions](https://github.com/ADITYAMAHAKALI/Avadhana/issues/28)
 
-- [ ] [Feed core: post / comment / like](https://github.com/ADITYAMAHAKALI/Avadhana/issues/29) — SLC v1 — post/like done end-to-end (backend gating verified live, wired through the web frontend); comments have a working, gated backend endpoint but no frontend UI yet (no `Comment` type existed in the mockup to wire against)
+- [ ] [Feed core: post / comment / like](https://github.com/ADITYAMAHAKALI/Avadhana/issues/29) — SLC v1 — backend done and verified live for all three (post/comment/like, gated to committed members); **frontend is read-only** — `ProblemPage` only wires `getFeed`, there's no post composer, no working like button, and no comment UI (no `Comment` type exists in the mockup) — corrected 2026-07-09, previously overclaimed
 - [x] [Share (open, non-gated)](https://github.com/ADITYAMAHAKALI/Avadhana/issues/30) — SLC v1 — no dedicated endpoint needed; all problem/feed GETs are public/unauthenticated by design, verified live
 - [ ] [Polls](https://github.com/ADITYAMAHAKALI/Avadhana/issues/31) — post-v1
 - [ ] [Task board: create / pick up / handover tasks](https://github.com/ADITYAMAHAKALI/Avadhana/issues/32) — post-v1
