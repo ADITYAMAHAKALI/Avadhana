@@ -108,9 +108,16 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   const data: unknown = text ? JSON.parse(text) : undefined;
 
   if (!response.ok) {
-    const errorBody = data as { error?: string; message?: string } | undefined;
+    // FastAPI's HTTPException wraps whatever `detail=` payload the backend
+    // raises inside a top-level `detail` key — e.g.
+    // `{"detail": {"error": "SLOT_LIMIT_EXCEEDED", "message": "..."}}`,
+    // not a flat `{error, message}` body. Unwrap `detail` when present so
+    // callers still get the real backend-authored `error`/`message`.
+    const rawBody = data as { detail?: unknown; error?: string; message?: string } | undefined;
+    const errorBody =
+      (rawBody?.detail as { error?: string; message?: string } | undefined) ?? rawBody;
     const message = errorBody?.message ?? `Request failed with status ${response.status}`;
-    throw new ApiError(response.status, message, errorBody?.error, data);
+    throw new ApiError(response.status, message, errorBody?.error, errorBody ?? data);
   }
 
   return data as T;
