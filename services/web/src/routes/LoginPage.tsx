@@ -1,9 +1,24 @@
-import { Link } from 'react-router-dom';
+import { useState, type FormEvent } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import styles from './LoginPage.module.css';
 
 export function LoginPage() {
-  const { login } = useAuth();
+  const { login, isAuthenticating, authError, clearAuthError } = useAuth();
+  const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    clearAuthError();
+    try {
+      await login({ email, password });
+      navigate('/dashboard', { replace: true });
+    } catch {
+      // authError is already set by the context; nothing else to do here.
+    }
+  }
 
   return (
     <div className={styles.page}>
@@ -38,7 +53,7 @@ export function LoginPage() {
             </Link>
           </div>
 
-          <div className={styles.formBody}>
+          <form className={styles.formBody} onSubmit={handleSubmit}>
             <h1 className={styles.heading}>Welcome back</h1>
             <p className={styles.subheading}>Your slots and clocks are exactly as you left them.</p>
 
@@ -48,21 +63,32 @@ export function LoginPage() {
                 <input
                   className={styles.input}
                   type="email"
-                  defaultValue="ravi.menon@example.com"
-                  autoComplete="off"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
+                  required
                 />
               </div>
               <div className={styles.field}>
                 <div className={styles.fieldLabel}>Password</div>
-                <input className={styles.input} type="password" defaultValue="password123" autoComplete="off" />
+                <input
+                  className={styles.input}
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  required
+                />
               </div>
             </div>
 
-            <button className={styles.submitBtn} onClick={() => login()}>
-              Log in
+            {authError && <div className={styles.errorBanner}>{authError}</div>}
+
+            <button type="submit" className={styles.submitBtn} disabled={isAuthenticating}>
+              {isAuthenticating ? 'Logging in…' : 'Log in'}
             </button>
             <div className={styles.forgot}>Forgot password?</div>
-          </div>
+          </form>
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { currentUserPort } from '../../data';
+import { subscribeFocusSlotsRefresh } from '../../data/focusSlotsRefresh';
 import type { CommittedProblemSummary, User } from '../../types/domain';
 import { useAuth } from '../../context/AuthContext';
 import { FocusSlotsWidget } from '../shared/FocusSlotsWidget';
@@ -27,11 +28,16 @@ export function Sidebar() {
   const [slots, setSlots] = useState({ used: 0, total: 3 });
   const [committed, setCommitted] = useState<CommittedProblemSummary[]>([]);
 
-  useEffect(() => {
+  const refresh = useCallback(() => {
     currentUserPort.getCurrentUser().then(setUser);
     currentUserPort.getFocusSlotCount().then(setSlots);
     currentUserPort.getCommittedProblems().then(setCommitted);
   }, []);
+
+  useEffect(() => {
+    refresh();
+    return subscribeFocusSlotsRefresh(refresh);
+  }, [refresh]);
 
   return (
     <aside className={styles.sidebar}>

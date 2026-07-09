@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { currentUserPort, problemsPort } from '../data';
 import type { CommittedProblemSummary, FeedPost, Problem, TaskItem } from '../types/domain';
@@ -23,30 +23,30 @@ export function ProblemPage() {
   const [loaded, setLoaded] = useState(false);
   const [showCommit, setShowCommit] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!problemId) return;
+    const [p, t, f, committed] = await Promise.all([
+      problemsPort.getById(problemId),
+      problemsPort.getTasks(problemId),
+      problemsPort.getFeed(problemId),
+      currentUserPort.getCommittedProblems(),
+    ]);
+    setProblem(p);
+    setTasks(t);
+    setFeed(f);
+    setLock(committed.find((c) => c.problemId === problemId) ?? committed[0] ?? null);
+    setLoaded(true);
+  }, [problemId]);
+
+  useEffect(() => {
     let cancelled = false;
-
-    async function load() {
-      const [p, t, f, committed] = await Promise.all([
-        problemsPort.getById(problemId!),
-        problemsPort.getTasks(problemId!),
-        problemsPort.getFeed(problemId!),
-        currentUserPort.getCommittedProblems(),
-      ]);
-      if (cancelled) return;
-      setProblem(p);
-      setTasks(t);
-      setFeed(f);
-      setLock(committed.find((c) => c.problemId === problemId) ?? committed[0] ?? null);
-      setLoaded(true);
-    }
-
-    load();
+    load().catch(() => {
+      if (!cancelled) setLoaded(true);
+    });
     return () => {
       cancelled = true;
     };
-  }, [problemId]);
+  }, [load]);
 
   if (loaded && !problem) {
     return <div className={styles.notFound}>Problem not found.</div>;
@@ -259,7 +259,7 @@ export function ProblemPage() {
 
       {showCommit && (
         <Modal onClose={() => setShowCommit(false)}>
-          <CommitModal problem={problem} onClose={() => setShowCommit(false)} />
+          <CommitModal problem={problem} onClose={() => setShowCommit(false)} onCommitted={load} />
         </Modal>
       )}
     </div>

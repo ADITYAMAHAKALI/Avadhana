@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import type { ActorSpecialization, Problem, Role } from '../../types/domain';
+import { commitmentsApi } from '../../data/real/commitmentsApi';
+import { notifyFocusSlotsChanged } from '../../data/focusSlotsRefresh';
+import { ApiError } from '../../data/real/httpClient';
 import styles from './CommitModal.module.css';
 
 const SPECIALIZATIONS: ActorSpecialization[] = [
@@ -20,12 +23,39 @@ const ROLE_NAME: Record<Role, string> = {
 interface CommitModalProps {
   problem: Problem;
   onClose: () => void;
+  /** Called (in addition to onClose) after the commitment POST succeeds, so the host screen can refetch its own lock/problem state. Optional — defaults to no-op. */
+  onCommitted?: () => void;
 }
 
-export function CommitModal({ problem, onClose }: CommitModalProps) {
+export function CommitModal({ problem, onClose, onCommitted }: CommitModalProps) {
   const [step, setStep] = useState<1 | 2>(1);
   const [role, setRole] = useState<Role | null>(null);
   const [specialization, setSpecialization] = useState<ActorSpecialization | null>(null);
+  const [isCommitting, setIsCommitting] = useState(false);
+  const [commitError, setCommitError] = useState<string | null>(null);
+
+  async function handleCommit() {
+    if (!role) return;
+    setIsCommitting(true);
+    setCommitError(null);
+    try {
+      await commitmentsApi.create(problem.id, {
+        role,
+        specialization: role === 'actor' ? specialization : null,
+      });
+      notifyFocusSlotsChanged();
+      onCommitted?.();
+      onClose();
+    } catch (err) {
+      // Per the API contract, SLOT_LIMIT_EXCEEDED / ALREADY_COMMITTED come with
+      // server-authored `message` text — surface that verbatim rather than
+      // inventing our own copy, so the hard-block reads exactly as the backend intends.
+      const message = err instanceof ApiError ? err.message : 'Could not commit to this problem. Please try again.';
+      setCommitError(message);
+    } finally {
+      setIsCommitting(false);
+    }
+  }
 
   function pickRole(next: Role) {
     setRole(next);
@@ -167,12 +197,22 @@ export function CommitModal({ problem, onClose }: CommitModalProps) {
             I understand I cannot free this slot for 90 days.
           </label>
 
+          {commitError && <div className={styles.errorBanner}>{commitError}</div>}
+
           <div className={styles.actions}>
-            <button type="button" className={styles.backButton} onClick={() => setStep(1)}>
+            <button
+              type="button"
+              className={styles.backButton}
+              onClick={() => {
+                setCommitError(null);
+                setStep(1);
+              }}
+              disabled={isCommitting}
+            >
               ← Back
             </button>
-            <button type="button" className={styles.commitButton} onClick={onClose}>
-              Commit — lock 90 days
+            <button type="button" className={styles.commitButton} onClick={handleCommit} disabled={isCommitting}>
+              {isCommitting ? 'Committing…' : 'Commit — lock 90 days'}
             </button>
           </div>
         </div>

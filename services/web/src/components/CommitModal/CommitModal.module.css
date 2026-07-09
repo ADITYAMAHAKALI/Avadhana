@@ -231,3 +231,20 @@
   flex: none;
   margin-top: 1px;
 }
+
+.commitButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.errorBanner {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: #FDEDED;
+  border: 1px solid #F3B9B9;
+  color: #A32020;
+  font-size: 13px;
+  line-height: 1.5;
+  font-weight: 500;
+}

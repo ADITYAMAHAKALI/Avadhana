@@ -1,9 +1,26 @@
-import { Link } from 'react-router-dom';
+import { useState, type FormEvent } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import styles from './SignupPage.module.css';
 
 export function SignupPage() {
-  const { login } = useAuth();
+  const { signup, isAuthenticating, authError, clearAuthError } = useAuth();
+  const navigate = useNavigate();
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [location, setLocation] = useState('');
+  const [password, setPassword] = useState('');
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    clearAuthError();
+    try {
+      await signup({ name, email, password, location });
+      navigate('/dashboard', { replace: true });
+    } catch {
+      // authError is already set by the context; nothing else to do here.
+    }
+  }
 
   return (
     <div className={styles.page}>
@@ -38,22 +55,46 @@ export function SignupPage() {
             <div className={styles.tabActive}>Sign up</div>
           </div>
 
-          <div className={styles.formBody}>
+          <form className={styles.formBody} onSubmit={handleSubmit}>
             <h1 className={styles.heading}>Create your account</h1>
             <p className={styles.subheading}>Three slots. Choose deliberately.</p>
 
             <div className={styles.fields}>
               <div className={styles.field}>
                 <div className={styles.fieldLabel}>Full name</div>
-                <input className={styles.input} type="text" placeholder="Your name" autoComplete="off" />
+                <input
+                  className={styles.input}
+                  type="text"
+                  placeholder="Your name"
+                  autoComplete="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
               </div>
               <div className={styles.field}>
                 <div className={styles.fieldLabel}>Email</div>
-                <input className={styles.input} type="email" placeholder="you@example.com" autoComplete="off" />
+                <input
+                  className={styles.input}
+                  type="email"
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
               </div>
               <div className={styles.field}>
                 <div className={styles.fieldLabel}>Location</div>
-                <input className={styles.input} type="text" placeholder="City, state" autoComplete="off" />
+                <input
+                  className={styles.input}
+                  type="text"
+                  placeholder="City, state"
+                  autoComplete="off"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  required
+                />
               </div>
               <div className={styles.field}>
                 <div className={styles.fieldLabel}>Password</div>
@@ -61,19 +102,24 @@ export function SignupPage() {
                   className={styles.input}
                   type="password"
                   placeholder="Create a password"
-                  autoComplete="off"
+                  autoComplete="new-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
                 />
               </div>
             </div>
 
-            <button className={styles.submitBtn} onClick={() => login()}>
-              Create account
+            {authError && <div className={styles.errorBanner}>{authError}</div>}
+
+            <button type="submit" className={styles.submitBtn} disabled={isAuthenticating}>
+              {isAuthenticating ? 'Creating account…' : 'Create account'}
             </button>
             <div className={styles.finePrint}>
               By continuing you agree that abandoning a commitment before its 90-day minimum is recorded on your
               profile.
             </div>
-          </div>
+          </form>
         </div>
       </div>
     </div>
