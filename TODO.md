@@ -1,6 +1,6 @@
 # Avadhana — Build Checklist
 
-Mirrors the GitHub issue backlog (`ADITYAMAHAKALI/Avadhana`, epics `#3` `#10` `#18` `#28` `#35` `#39` `#55` `#60`) so progress can be tracked here or on GitHub. Check items off in either place — GitHub is the source of truth for status; this file is for a quick local read.
+Mirrors the GitHub issue backlog (`ADITYAMAHAKALI/Avadhana`, epics `#3` `#10` `#18` `#28` `#35` `#39` `#55` `#60` `#62`) so progress can be tracked here or on GitHub. Check items off in either place — GitHub is the source of truth for status; this file is for a quick local read.
 
 **Local Kubernetes Dev Environment is done** — every service runs locally on Podman/kind via `make dev-up` (see `docs/local-dev.md`). **SLC v1 scope decided 2026-07-09**: ship a minimal-but-complete build of the core commitment mechanic — the thing that actually differentiates this platform — before investing in AI coordination or gamification polish. Items marked **(post-v1)** below are real backlog, not cut; they're sequenced after the initial deployed release validates the core mechanic with 5–10 real problems (spec Section 10). See "SLC v1 Release Plan" immediately below for the build order and reasoning.
 
@@ -119,6 +119,22 @@ Rewards follow-through, not activity — do not build a second engagement-farmin
 `services/web/` — React + TS + Vite, ported from the Claude Design mockup. Mock data layer behind ports until backend domain endpoints exist (issues #4-17).
 
 - [x] [Implement Avadhana Web app shell from Claude Design mockup](https://github.com/ADITYAMAHAKALI/Avadhana/issues/61)
+
+## [Solution Marketplace](https://github.com/ADITYAMAHAKALI/Avadhana/issues/62) — designed, not yet sequenced
+
+B2B/B2G RFP-to-Solution matching marketplace (multi-attribute + multi-embedding Reciprocal Rank Fusion). **Independent of the civic 3-slot/90-day-lock/commitment-gated-voice mechanic** — see CLAUDE.md "Solution Marketplace Architecture" for the full design, domain model, and open questions, and `architecture/modules/05-solution-marketplace.drawio.png` / `06-marketplace-matching-flow.drawio.png` for diagrams. Architecture and issues are ready; **sequencing against the SLC v1 plan above (which still comes first) is an open product decision, not yet made** — don't start building this ahead of the civic core loop pilot without an explicit call to reprioritize.
+
+- [ ] [Design Organization + membership schema](https://github.com/ADITYAMAHAKALI/Avadhana/issues/63)
+- [ ] [RFP schema + posting flow](https://github.com/ADITYAMAHAKALI/Avadhana/issues/64)
+- [ ] [Solution schema + publishing flow](https://github.com/ADITYAMAHAKALI/Avadhana/issues/65)
+- [ ] [Structured attribute-match scoring (no ML)](https://github.com/ADITYAMAHAKALI/Avadhana/issues/66)
+- [ ] [Embeddings provider integration](https://github.com/ADITYAMAHAKALI/Avadhana/issues/67)
+- [ ] [Matching engine: rank fusion (RRF)](https://github.com/ADITYAMAHAKALI/Avadhana/issues/68)
+- [ ] [Matching results UI: ranked shortlist + explainability](https://github.com/ADITYAMAHAKALI/Avadhana/issues/69)
+- [ ] [Community-promotion bridge (RFP → civic Problem)](https://github.com/ADITYAMAHAKALI/Avadhana/issues/70)
+- [ ] [Free-quota tracking + billing paywall gate](https://github.com/ADITYAMAHAKALI/Avadhana/issues/71)
+- [ ] [Web frontend: Marketplace tab](https://github.com/ADITYAMAHAKALI/Avadhana/issues/72)
+- [ ] [Free-tier abuse safeguards](https://github.com/ADITYAMAHAKALI/Avadhana/issues/73)
 
 ## Security Checklist (pre-launch)
 

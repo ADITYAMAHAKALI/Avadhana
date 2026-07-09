@@ -25,6 +25,8 @@ More detailed, field-level ER diagrams than the high-level overview in page 2 �
 | 2 | Problem & Hierarchy | [modules/02-problem-hierarchy.drawio.png](modules/02-problem-hierarchy.drawio.png) | Problem, ProblemRelationship, TierReclassification, MergeConflict |
 | 3 | Moderation & Appeals | [modules/03-moderation-appeals.drawio.png](modules/03-moderation-appeals.drawio.png) | ModerationEvent, Appeal, ModerationCalibrationRecord, ProblemScopeDefinition |
 | 4 | AI Coordination & Task Assignment | [modules/04-ai-coordination-tasks.drawio.png](modules/04-ai-coordination-tasks.drawio.png) | AIInvocation, ProblemSummary, ChecklistItem, TaskAssignment |
+| 5 | Solution Marketplace (ERD) | [modules/05-solution-marketplace.drawio.png](modules/05-solution-marketplace.drawio.png) | Organization, OrganizationMembership, RFP, RFPRequirement, Solution, SolutionAttribute, EmbeddingVector, MatchRun, SolutionMatch, BillingEvent — independent of the civic commitment mechanic, see `CLAUDE.md` "Solution Marketplace Architecture" |
+| 6 | Solution Marketplace — Matching Flow | [modules/06-marketplace-matching-flow.drawio.png](modules/06-marketplace-matching-flow.drawio.png) | RFP publish → hard-constraint filtering → structured attribute scoring + embedding similarity scoring (per named embedding space, via a non-SARVAM embeddings provider) → per-signal ranking → weighted Reciprocal Rank Fusion → immutable SolutionMatch results → surfaced to buyer |
 
 ## Editing
 
@@ -38,4 +40,4 @@ More detailed, field-level ER diagrams than the high-level overview in page 2 �
 
 ## Status
 
-These diagrams reflect the architecture as scoped in `CLAUDE.md` as of 2026-07-08, including the AI coordination layer (SARVAM AI), problem split/merge mechanics, and moderation/appeals flow. They do **not** yet cover the gamification (badges/reputation) or problem-feed interaction set (polls, task handover, donations, asset uploads) added afterward — see `CLAUDE.md` for that scope pending its own diagram pass.
+These diagrams reflect the architecture as scoped in `CLAUDE.md` as of 2026-07-09, including the AI coordination layer (SARVAM AI), problem split/merge mechanics, moderation/appeals flow, and the Solution Marketplace (modules 5-6). They do **not** yet cover the gamification (badges/reputation) or problem-feed interaction set (polls, task handover, donations, asset uploads) added earlier — see `CLAUDE.md` for that scope pending its own diagram pass.

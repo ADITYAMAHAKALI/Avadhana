@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="drawio" version="26.0.0">
+  <diagram name="Solution Marketplace — Matching Flow" id="flow-marketplace-matching">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1150" pageHeight="1520" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="n_start" value="RFP published or edited" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;" vertex="1" parent="1"><mxGeometry x="380" y="40" width="260" height="60" as="geometry" /></mxCell>
+        <mxCell id="n_enqueue" value="Enqueue matching job
+marketplace-matching queue (Redis / RQ)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=12;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1"><mxGeometry x="360" y="160" width="300" height="80" as="geometry" /></mxCell>
+        <mxCell id="n_worker" value="Worker dequeues job
+fetches RFP + candidate Solutions" style="rounded=1;whiteSpace=wrap;html=1;arcSize=12;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="1"><mxGeometry x="360" y="300" width="300" height="80" as="geometry" /></mxCell>
+        <mxCell id="n_filter" value="Hard-constraint filtering (SQL)
+drop Solutions failing is_hard_constraint requirements" style="rounded=1;whiteSpace=wrap;html=1;arcSize=12;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1"><mxGeometry x="340" y="440" width="340" height="90" as="geometry" /></mxCell>
+        <mxCell id="n_any" value="Any candidates
+remain?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" vertex="1" parent="1"><mxGeometry x="400" y="580" width="220" height="100" as="geometry" /></mxCell>
+        <mxCell id="n_none" value="No matches
+notify buyer, suggest relaxing requirements" style="rounded=1;whiteSpace=wrap;html=1;arcSize=12;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;" vertex="1" parent="1"><mxGeometry x="40" y="600" width="280" height="90" as="geometry" /></mxCell>
+        <mxCell id="n_done_none" value="Done" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;" vertex="1" parent="1"><mxGeometry x="20" y="850" width="180" height="50" as="geometry" /></mxCell>
+        <mxCell id="n_attr" value="Structured attribute-match scoring
+(deterministic, weighted overlap)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=12;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1"><mxGeometry x="120" y="740" width="300" height="90" as="geometry" /></mxCell>
+        <mxCell id="n_embed" value="Embedding similarity scoring per embedding_space
+Embeddings Provider API (OpenAI/Cohere/self-hosted —
+NOT SARVAM, no embeddings endpoint) + pgvector cosine sim" style="rounded=1;whiteSpace=wrap;html=1;arcSize=12;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="1"><mxGeometry x="500" y="740" width="340" height="110" as="geometry" /></mxCell>
+        <mxCell id="n_rank" value="Rank candidates per signal
+(take rank position, not raw score)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=12;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1"><mxGeometry x="340" y="900" width="320" height="90" as="geometry" /></mxCell>
+        <mxCell id="n_rrf" value="Weighted Reciprocal Rank Fusion
+score = Σ weight_i · 1/(k + rank_i(solution)), k=60" style="rounded=1;whiteSpace=wrap;html=1;arcSize=12;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1"><mxGeometry x="340" y="1030" width="320" height="90" as="geometry" /></mxCell>
+        <mxCell id="n_store" value="Store SolutionMatch rows
+final_rrf_score, rank, per-signal breakdown — immutable" style="rounded=1;whiteSpace=wrap;html=1;arcSize=12;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1"><mxGeometry x="340" y="1160" width="320" height="90" as="geometry" /></mxCell>
+        <mxCell id="n_surface" value="Surface top-K ranked matches to buyer
++ notify matched providers" style="rounded=1;whiteSpace=wrap;html=1;arcSize=12;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1"><mxGeometry x="340" y="1290" width="320" height="90" as="geometry" /></mxCell>
+        <mxCell id="n_done" value="Done" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;" vertex="1" parent="1"><mxGeometry x="420" y="1420" width="160" height="60" as="geometry" /></mxCell>
+        <mxCell id="e1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=11;" edge="1" parent="1" source="n_start" target="n_enqueue"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="e2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=11;" edge="1" parent="1" source="n_enqueue" target="n_worker"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="e3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=11;" edge="1" parent="1" source="n_worker" target="n_filter"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="e4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=11;" edge="1" parent="1" source="n_filter" target="n_any"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="e5" value="No" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.3;entryDx=0;entryDy=0;fontSize=11;" edge="1" parent="1" source="n_any" target="n_none"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="320" y="630" /></Array></mxGeometry></mxCell>
+        <mxCell id="e6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=0.3;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=11;" edge="1" parent="1" source="n_none" target="n_done_none"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="e7" value="Yes" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=0.35;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=11;" edge="1" parent="1" source="n_any" target="n_attr"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="470" y="700" /><mxPoint x="270" y="700" /></Array></mxGeometry></mxCell>
+        <mxCell id="e8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=0.85;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=11;" edge="1" parent="1" source="n_any" target="n_embed"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="650" y="700" /></Array></mxGeometry></mxCell>
+        <mxCell id="e9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=0.7;exitY=1;exitDx=0;exitDy=0;entryX=0.15;entryY=0;entryDx=0;entryDy=0;fontSize=11;" edge="1" parent="1" source="n_attr" target="n_rank"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="320" y="990" /></Array></mxGeometry></mxCell>
+        <mxCell id="e10" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=0.3;exitY=1;exitDx=0;exitDy=0;entryX=0.85;entryY=0;entryDx=0;entryDy=0;fontSize=11;" edge="1" parent="1" source="n_embed" target="n_rank"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="600" y="990" /></Array></mxGeometry></mxCell>
+        <mxCell id="e11" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=11;" edge="1" parent="1" source="n_rank" target="n_rrf"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="e12" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=11;" edge="1" parent="1" source="n_rrf" target="n_store"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="e13" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=11;" edge="1" parent="1" source="n_store" target="n_surface"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="e14" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=11;" edge="1" parent="1" source="n_surface" target="n_done"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        
+<mxCell id="legend" value="Legend" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#666666;verticalAlign=top;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+  <mxGeometry x="820" y="40" width="300" height="220" as="geometry" />
+</mxCell>
+<mxCell id="lg1" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="legend"><mxGeometry x="10" y="28" width="40" height="24" as="geometry" /></mxCell>
+<mxCell id="lg1t" value="Start / End" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;" vertex="1" parent="legend"><mxGeometry x="60" y="28" width="220" height="24" as="geometry" /></mxCell>
+<mxCell id="lg2" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="legend"><mxGeometry x="10" y="58" width="40" height="24" as="geometry" /></mxCell>
+<mxCell id="lg2t" value="Core process" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;" vertex="1" parent="legend"><mxGeometry x="60" y="58" width="220" height="24" as="geometry" /></mxCell>
+<mxCell id="lg3" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="legend"><mxGeometry x="10" y="88" width="40" height="24" as="geometry" /></mxCell>
+<mxCell id="lg3t" value="AI / worker / external API step" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;" vertex="1" parent="legend"><mxGeometry x="60" y="88" width="220" height="24" as="geometry" /></mxCell>
+<mxCell id="lg4" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="legend"><mxGeometry x="10" y="118" width="40" height="24" as="geometry" /></mxCell>
+<mxCell id="lg4t" value="No-match / negative outcome" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;" vertex="1" parent="legend"><mxGeometry x="60" y="118" width="220" height="24" as="geometry" /></mxCell>
+<mxCell id="lg5" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="legend"><mxGeometry x="10" y="148" width="40" height="24" as="geometry" /></mxCell>
+<mxCell id="lg5t" value="Resolved / positive outcome" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;" vertex="1" parent="legend"><mxGeometry x="60" y="148" width="220" height="24" as="geometry" /></mxCell>
+<mxCell id="lg6" value="" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="legend"><mxGeometry x="10" y="178" width="40" height="30" as="geometry" /></mxCell>
+<mxCell id="lg6t" value="Decision point" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;" vertex="1" parent="legend"><mxGeometry x="60" y="182" width="220" height="24" as="geometry" /></mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

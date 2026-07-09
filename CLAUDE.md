@@ -135,11 +135,71 @@ Problems are organized as trees (single parent, aiming for max 3 levels: root �
 ### Model Stack & Inference
 
 - **LLMs**: SARVAM AI provides language models for summarization, checklist generation, and off-topic detection. Significantly cheaper than OpenAI; latency varies by model choice.
-- **Embeddings**: SARVAM AI embedding models enable semantic search, problem similarity detection (useful for merge conflict detection), and potential fine-tuning for off-topic classification.
+- **Embeddings**: **SARVAM AI has no embeddings endpoint** — verified against SARVAM's live API reference and OpenAPI spec while building the real client (issue #19; see `services/sarvam-mock/README.md` "Assumptions & known gaps" for the full record). Any feature needing real vector embeddings (semantic search, problem similarity for merge-conflict detection, the Solution Marketplace's matching engine below) needs a *different* embeddings provider — see "Solution Marketplace Architecture" below for the concrete decision made there. Don't assume SARVAM covers this.
 - **Async architecture**: AI agent runs on a schedule, not blocking user requests. Use a job queue (Celery, Bull, RQ, etc.) for invocations.
 - **Cost optimization**: Batch summarization and checklist generation in scheduled jobs, not per-request. Monitor SARVAM API usage and costs closely during early beta.
 - **Calibration loop**: Off-topic appeals data → model fine-tuning → improved detection over time. Consider whether fine-tuning or prompt engineering will be sufficient, or if you need custom model training later.
 - **Rate limiting & quotas**: Set up strict rate limits on AI agent invocation to avoid runaway costs. Prioritize essential operations (off-topic blocking, summaries) over nice-to-haves (task assignment suggestions).
+
+## Solution Marketplace Architecture
+
+A second product surface, added alongside the civic commitment-first platform: a two-sided B2B/B2G marketplace matching enterprise/government **RFPs** (problem postings with structured requirements) to a repository of **Solutions** (published by providers), using a multi-attribute, multi-embedding ranking engine. Lives in the product as its own top-level tab ("Marketplace"), separate from "Discover" (civic problems).
+
+**This is a deliberate architectural boundary, not an oversight**: the Marketplace is *independent* of the 3-slot / 90-day-lock / commitment-gated-voice mechanic. Posting an RFP, publishing a Solution, or browsing matches never spends a focus slot and is never locked for 90 days — that mechanic exists to force depth over breadth in *personal* civic commitment, and doesn't map onto a company evaluating vendor solutions. Forcing marketplace activity through the civic commitment system would either break the B2B flow or dilute the meaning of a "commitment" for everyone else. The one deliberate bridge between the two systems is the "promote to community" flow below — once an RFP crosses that bridge, the resulting civic Problem plays by the civic rules like any other.
+
+### Two resolution modes per RFP
+
+A buyer publishing an RFP chooses (or enables both) how it gets resolved:
+
+- **Community-driven** (`resolution_mode: community`): the RFP is promoted into a real civic `Problem` (tier, location, category — same as any Problem). From that point on it's fully subject to the standard mechanic: committed members spend focus slots, the 90-day lock applies, only committed members have voice, and any monetization (e.g. Backer donations) is whatever the committed members work out themselves — the Marketplace doesn't dictate terms here. `RFP.promoted_problem_id` links back to the originating RFP for traceability, but the Problem itself doesn't know or care it came from the Marketplace.
+- **Marketplace matching** (`resolution_mode: marketplace`): the RFP is scored against the Solution repository by the matching engine (below) and the buyer gets a ranked shortlist of solution providers to engage directly — a one-to-one procurement flow, not a community effort.
+- `resolution_mode: both` is allowed — nothing stops a buyer from promoting to the community *and* getting matched to vendors simultaneously.
+
+### Domain model
+
+New entities (additive — none of this touches the existing User/Problem/Commitment schema, aside from the optional `RFP.promoted_problem_id` FK):
+
+- **Organization**: the account type for enterprises/agencies/solution providers — deliberately *not* the same as a civic `User`. A `User` can hold an `OrganizationMembership` (role: admin/member) in one or more Organizations and acts on the Organization's behalf when posting RFPs or Solutions. Carries `rfp_free_quota_used` / `rfp_free_quota_limit` and `billing_status` for the monetization model below.
+- **RFP**: `organization_id`, `title`, `description`, budget range, timeline, industry, geography, `resolution_mode`, `visibility` (public / invite-only — some buyers will want a private RFP matched only to select providers), `status`, `promoted_problem_id` (nullable), `is_billable` (set once the posting Organization's free quota is exceeded).
+- **RFPRequirement**: structured, per-RFP requirement rows (`attribute_key`, `attribute_value`, `weight`, `is_hard_constraint`). Hard constraints (e.g. a required compliance certification) filter candidates out entirely before ranking; weighted/soft requirements just influence score.
+- **Solution**: `organization_id` (the provider), `title`, `description`, `category_tags`, `status`. **Always free to publish** — this is the supply side / lead-gen surface for providers, never gated.
+- **SolutionAttribute**: structured attribute rows mirroring `RFPRequirement`'s `attribute_key` vocabulary where possible, so deterministic attribute-match scoring compares like-for-like keys.
+- **EmbeddingVector**: `owner_type` (rfp/solution), `owner_id`, `embedding_space` (named — e.g. `summary`, `technical_spec`, `industry_context` — RFP and Solution embeddings are only ever compared *within* the same named space, never across), `vector`, `model_name`, `model_version`, `generated_at`. Insert-only like every other audit-style table in this codebase — a content edit generates a new embedding row, old ones are kept, not overwritten.
+- **MatchRun**: one row per matching computation for an RFP (`triggered_by`, `model_versions_used`, `started_at`/`completed_at`, `status`) — immutable audit trail, same pattern as `AIInvocation`.
+- **SolutionMatch**: the ranked output of a `MatchRun` — `final_rrf_score`, `rank`, and a `signal_scores`/`signal_ranks` JSON breakdown per signal (attribute-match, each embedding space) so a buyer can see *why* a match happened. Explainability here matters for the same trust reasons moderation transparency matters elsewhere in this codebase.
+- **BillingEvent**: immutable log of free-quota consumption and billable postings (`organization_id`, `rfp_id`, `event_type`, `amount`, `occurred_at`). Actual payment processing (Stripe or similar) is explicitly out of scope for the first pass — this just tracks usage/quota state cleanly enough that billing can be wired in later without a schema change.
+
+### Matching engine: multi-attribute, multi-embedding RRF fusion
+
+On RFP publish (or re-publish after an edit), a matching job runs asynchronously (job queue, not blocking the request — same pattern as AI coordination):
+
+1. **Hard-constraint filtering**: cheap SQL filter — drop any Solution that fails an `is_hard_constraint` RFPRequirement before doing any ranking work.
+2. **Per-signal scoring** against the remaining candidates:
+   - Structured attribute-match score: deterministic, weighted overlap between `RFPRequirement` and `SolutionAttribute` rows — no ML involved.
+   - One semantic similarity score per named `embedding_space` (e.g. `summary`, `technical_spec`) — cosine similarity between the RFP's and each candidate Solution's vector in that space.
+3. **Rank, don't just score, each signal**: for each signal, sort all candidates and take each Solution's rank (position), not its raw score — this is what makes Reciprocal Rank Fusion work without needing to normalize incompatible scales (a 0-1 cosine similarity and a weighted attribute-overlap score aren't directly comparable, but ranks are).
+4. **Fuse via (weighted) RRF**: `score(solution) = Σ_i weight_i · 1/(k + rank_i(solution))` across all signals `i`, with `k` = 60 (the standard RRF constant) unless tuning says otherwise. Store the fused score, the rank, and the full per-signal breakdown on `SolutionMatch`.
+5. Surface the top-K ranked matches to the buyer (and optionally notify matched providers).
+
+### Embeddings provider
+
+SARVAM AI has no embeddings endpoint (see "Model Stack & Inference" above) — the matching engine needs a dedicated embeddings source. Decision: bring in a **second** embeddings provider (OpenAI, Cohere, or a self-hosted sentence-transformers model — final pick is an implementation detail, not an architectural one) used *only* for Marketplace embeddings, alongside SARVAM for chat/summarization/off-topic work elsewhere. Store vectors in **Postgres via the `pgvector` extension** rather than standing up a separate vector database — the platform is already on Postgres for everything else, and a second stateful data store is disproportionate cost for a solo-dev project at this stage (same reasoning CLAUDE.md already applies elsewhere against over-engineering the data tier early).
+
+### Monetization
+
+- **Solution publishing: always free.** This is the provider-acquisition/advertising surface — charging providers to list would kill the supply side before it exists.
+- **RFP posting: free for an Organization's first 100 RFPs, billed per-RFP after that** (`Organization.rfp_free_quota_used` vs `rfp_free_quota_limit`, default 100). Crossing the threshold sets `RFP.is_billable = true` and logs a `BillingEvent`; the actual payment step (charging a card, invoicing) is a separate, later piece of work — this phase only needs the quota tracking and the paywall gate to exist cleanly.
+
+### Service boundaries (solo-dev pragmatism)
+
+Consistent with how Moderation got its own Containerfile before its logic was actually split out of the Backend API process: the Marketplace's HTTP surface (RFP/Solution/Organization CRUD, browsing matches) starts as new routers/models *inside* `backend-api` — a clearly separate module (`app/models/marketplace/`, `app/routers/marketplace/`, its own migration lineage) rather than a new deployed service, to avoid the operational overhead of yet another service for a solo dev. It's structured so it *can* be extracted into its own service later without a rework, the same promise already made for Moderation. The async matching job reuses the existing Redis/RQ job-queue infrastructure in `ai-coordinator-worker` (same broker, a distinctly-named `marketplace-matching` queue, its own job handler module) rather than standing up a dedicated worker service — architecturally the same shape of problem (background job, calls an external AI API, writes immutable results) as the AI coordination jobs already there.
+
+### Open questions
+
+- **Free-tier abuse**: nothing yet stops an Organization from creating many Organizations to keep resetting the 100-RFP free quota. Needs the same kind of abuse-safeguard thinking already flagged in "Known Unknowns" below for civic problem creation.
+- **Cross-Organization visibility**: should a Solution's provider see *which* RFPs it matched against (helps them tune their listing) even for invite-only RFPs, or does invite-only mean fully opaque to non-invited providers?
+- **Embedding space vocabulary**: the named embedding spaces above (`summary`, `technical_spec`, `industry_context`) are a starting proposal, not a final schema — the real set should come from looking at actual RFP/Solution content once there's some to look at.
+- **RRF weight tuning**: initial per-signal weights (`weight_i`) will be a guess; needs the same kind of calibration-loop thinking already applied to off-topic detection once real match outcomes (did the buyer actually engage the top match?) start coming in.
 
 ## Development Stack & Structure
 
