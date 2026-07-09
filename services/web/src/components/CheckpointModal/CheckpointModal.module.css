@@ -1,0 +1,215 @@
+.header {
+  background: var(--color-primary);
+  color: var(--color-surface);
+  padding: 24px 28px;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.2em;
+  color: var(--color-gold-accent);
+}
+
+.headerTitle {
+  font-weight: 600;
+  font-size: 20px;
+  margin-top: 8px;
+}
+
+.headerBody {
+  font-size: 13px;
+  color: var(--color-sidebar-text-muted);
+  margin-top: 4px;
+}
+
+.body {
+  padding: 26px 28px;
+}
+
+.stepLabel {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: var(--color-ink-muted);
+  text-transform: uppercase;
+}
+
+.actionList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.actionCard {
+  background: var(--color-surface-white);
+  border: 1.5px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  padding: 15px 18px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.actionCardSelected {
+  background: var(--color-saffron-tint);
+  border-color: var(--color-saffron);
+}
+
+.actionCardAbandon.actionCardSelected {
+  background: var(--color-abandoned-tint);
+  border-color: var(--color-abandoned);
+}
+
+.actionCardHead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.actionName {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.actionDesc {
+  font-size: 13px;
+  color: var(--color-ink-60);
+  margin-top: 6px;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.cancelButton {
+  flex: 1;
+  font-family: inherit;
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--color-ink-60);
+  background: transparent;
+  border: 1px solid var(--color-line-strong);
+  padding: 12px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.backButton {
+  flex: none;
+  font-family: inherit;
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--color-ink-60);
+  background: transparent;
+  border: 1px solid var(--color-line-strong);
+  padding: 12px 18px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.nextButton {
+  flex: 2;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 14px;
+  color: #fff;
+  background: var(--color-saffron);
+  border: none;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.nextButtonDisabled {
+  color: #b0a794;
+  background: #efe7d8;
+  cursor: not-allowed;
+}
+
+.confirmButton {
+  flex: 1;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 14px;
+  color: #fff;
+  background: var(--color-saffron);
+  border: none;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.confirmButtonAbandon {
+  background: var(--color-abandoned);
+}
+
+.confirmButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.confirmCard {
+  margin-top: 18px;
+  background: var(--color-surface-white);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+
+.confirmCardAbandon {
+  background: var(--color-abandoned-tint);
+  border-color: var(--color-abandoned-tint-border);
+}
+
+.confirmText {
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--color-ink-70);
+}
+
+.confirmDesc {
+  color: var(--color-ink-80);
+  margin-top: 6px;
+}
+
+.confirmWarning {
+  color: var(--color-abandoned);
+  font-weight: 600;
+  margin-top: 10px;
+}
+
+.noteLabel {
+  display: block;
+  margin-top: 16px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-ink-70);
+}
+
+.noteInput {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  font-family: inherit;
+  font-size: 13.5px;
+  color: var(--color-ink);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  resize: vertical;
+}
+
+.errorBanner {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: #FDEDED;
+  border: 1px solid #F3B9B9;
+  color: #A32020;
+  font-size: 13px;
+  line-height: 1.5;
+  font-weight: 500;
+}

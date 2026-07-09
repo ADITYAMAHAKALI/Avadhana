@@ -1,4 +1,5 @@
 import type {
+  Comment,
   CommitmentHistoryEntry,
   CommittedProblemSummary,
   FeedPost,
@@ -177,6 +178,14 @@ export const FEED_BY_PROBLEM: Record<string, FeedPost[]> = {
     },
   ],
 };
+
+/**
+ * Comments keyed by post id. Empty by default in the shipped fixtures — the
+ * mock feedApi (services/web/src/data/real/feedApi.ts's mock-mode branch)
+ * pushes into these arrays at runtime so posting/commenting/liking "work"
+ * against mock data without a backend. Not persisted across a page reload.
+ */
+export const COMMENTS_BY_POST: Record<string, Comment[]> = {};
 
 export const GRAPH_BY_PROBLEM: Record<
   string,
