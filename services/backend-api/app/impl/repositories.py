@@ -12,12 +12,13 @@ counting, lock enforcement, and reputation deltas live in
 directly — so the service layer stays testable against fakes.
 """
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.models.checkpoint import CheckpointEventType, CommitmentCheckpoint
 from app.models.commitment import Commitment, CommitmentStatus
 from app.models.feed import Comment, FeedPost, PostLike
+from app.models.moderation import ModerationOverrideEvent, ModerationTargetType
 from app.models.problem import Problem
 from app.models.user import User
 
@@ -182,16 +183,26 @@ class SqlAlchemyFeedRepo:
         self.session.refresh(post)
         return post
 
-    def list_posts_for_problem(self, problem_id: str) -> list[FeedPost]:
-        stmt = (
-            select(FeedPost)
-            .where(FeedPost.problem_id == problem_id)
-            .order_by(FeedPost.created_at.desc())
-        )
+    def list_posts_for_problem(
+        self, problem_id: str, *, include_hidden: bool = False
+    ) -> list[FeedPost]:
+        stmt = select(FeedPost).where(FeedPost.problem_id == problem_id)
+        if not include_hidden:
+            stmt = stmt.where(FeedPost.hidden.is_(False))
+        stmt = stmt.order_by(FeedPost.created_at.desc())
         return list(self.session.execute(stmt).scalars().all())
 
     def get_post(self, post_id: str) -> FeedPost | None:
         return self.session.get(FeedPost, post_id)
+
+    def set_post_hidden(self, post_id: str, hidden: bool) -> FeedPost | None:
+        post = self.session.get(FeedPost, post_id)
+        if post is None:
+            return None
+        post.hidden = hidden
+        self.session.commit()
+        self.session.refresh(post)
+        return post
 
     def add_comment(self, comment: Comment) -> Comment:
         self.session.add(comment)
@@ -199,13 +210,26 @@ class SqlAlchemyFeedRepo:
         self.session.refresh(comment)
         return comment
 
-    def list_comments_for_post(self, post_id: str) -> list[Comment]:
-        stmt = (
-            select(Comment)
-            .where(Comment.post_id == post_id)
-            .order_by(Comment.created_at.asc())
-        )
+    def list_comments_for_post(
+        self, post_id: str, *, include_hidden: bool = False
+    ) -> list[Comment]:
+        stmt = select(Comment).where(Comment.post_id == post_id)
+        if not include_hidden:
+            stmt = stmt.where(Comment.hidden.is_(False))
+        stmt = stmt.order_by(Comment.created_at.asc())
         return list(self.session.execute(stmt).scalars().all())
+
+    def get_comment(self, comment_id: str) -> Comment | None:
+        return self.session.get(Comment, comment_id)
+
+    def set_comment_hidden(self, comment_id: str, hidden: bool) -> Comment | None:
+        comment = self.session.get(Comment, comment_id)
+        if comment is None:
+            return None
+        comment.hidden = hidden
+        self.session.commit()
+        self.session.refresh(comment)
+        return comment
 
     def toggle_like(self, post_id: str, user_id: str) -> int:
         stmt = select(PostLike).where(
@@ -222,3 +246,58 @@ class SqlAlchemyFeedRepo:
     def like_count(self, post_id: str) -> int:
         stmt = select(func.count()).select_from(PostLike).where(PostLike.post_id == post_id)
         return self.session.execute(stmt).scalar_one()
+
+
+class SqlAlchemyModerationRepo:
+    def __init__(self, session: Session):
+        self.session = session
+
+    def add(self, event: ModerationOverrideEvent) -> ModerationOverrideEvent:
+        self.session.add(event)
+        self.session.commit()
+        self.session.refresh(event)
+        return event
+
+    def list_for_problem(self, problem_id: str) -> list[ModerationOverrideEvent]:
+        # ModerationOverrideEvent.target_id is a polymorphic FK (post or
+        # comment id, per target_type) with no DB-level foreign key
+        # constraint, so "events for this problem" is answered by two
+        # separate id-set lookups (post ids owned by the problem, and
+        # comment ids owned by those posts) rather than a single JOIN.
+        post_ids = list(
+            self.session.execute(
+                select(FeedPost.id).where(FeedPost.problem_id == problem_id)
+            )
+            .scalars()
+            .all()
+        )
+        comment_ids: list[str] = []
+        if post_ids:
+            comment_ids = list(
+                self.session.execute(
+                    select(Comment.id).where(Comment.post_id.in_(post_ids))
+                )
+                .scalars()
+                .all()
+            )
+
+        conditions = []
+        if post_ids:
+            conditions.append(
+                (ModerationOverrideEvent.target_type == ModerationTargetType.POST.value)
+                & (ModerationOverrideEvent.target_id.in_(post_ids))
+            )
+        if comment_ids:
+            conditions.append(
+                (ModerationOverrideEvent.target_type == ModerationTargetType.COMMENT.value)
+                & (ModerationOverrideEvent.target_id.in_(comment_ids))
+            )
+        if not conditions:
+            return []
+
+        stmt = (
+            select(ModerationOverrideEvent)
+            .where(or_(*conditions))
+            .order_by(ModerationOverrideEvent.occurred_at.desc())
+        )
+        return list(self.session.execute(stmt).scalars().all())

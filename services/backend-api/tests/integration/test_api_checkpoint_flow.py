@@ -168,3 +168,7 @@ def test_continue_resets_lock_keeps_active_and_frees_no_slot(client, db_session)
     committed = client.get("/users/me/committed-problems", headers=headers).json()
     assert len(committed) == 1
     assert committed[0]["problemId"] == problem_id
+    # commitmentId must be present: the frontend needs it to key the
+    # checkpoint endpoint (POST /commitments/{commitment_id}/checkpoint),
+    # which has no other lookup path from problem_id for the current user.
+    assert committed[0]["commitmentId"] == commitment_id

@@ -4,11 +4,19 @@ Passwords are bcrypt-hashed (app.core.security) — never stored or logged
 plaintext. Issues a JWT on both signup and login (see
 app.core.security.create_access_token); there is no separate "verify
 email" step for SLC v1.
+
+Both endpoints carry a tighter-than-default rate limit
+(`app.core.rate_limit.AUTH_RATE_LIMIT`, 5/minute per IP) on top of the
+general-API default — these are the brute-force-sensitive endpoints
+(credential stuffing on login, account-enumeration/spam via signup). The
+`request: Request` parameter is required by slowapi's `@limiter.limit`
+decorator to read the caller's IP; it's otherwise unused by the handler.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
+from app.core.rate_limit import AUTH_RATE_LIMIT, limiter
 from app.core.security import create_access_token, hash_password, verify_password
 from app.db.session import get_session
 from app.impl.repositories import SqlAlchemyUserRepo
@@ -20,7 +28,10 @@ router = APIRouter(tags=["auth"])
 
 
 @router.post("/auth/signup", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
-def signup(body: SignupRequest, session: Session = Depends(get_session)) -> AuthResponse:
+@limiter.limit(AUTH_RATE_LIMIT)
+def signup(
+    request: Request, body: SignupRequest, session: Session = Depends(get_session)
+) -> AuthResponse:
     user_repo = SqlAlchemyUserRepo(session)
 
     if user_repo.get_by_email(body.email) is not None:
@@ -41,7 +52,10 @@ def signup(body: SignupRequest, session: Session = Depends(get_session)) -> Auth
 
 
 @router.post("/auth/login", response_model=AuthResponse)
-def login(body: LoginRequest, session: Session = Depends(get_session)) -> AuthResponse:
+@limiter.limit(AUTH_RATE_LIMIT)
+def login(
+    request: Request, body: LoginRequest, session: Session = Depends(get_session)
+) -> AuthResponse:
     user_repo = SqlAlchemyUserRepo(session)
     user = user_repo.get_by_email(body.email)
 

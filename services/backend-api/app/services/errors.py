@@ -74,3 +74,14 @@ class NotCommittedError(Exception):
             "Only committed members can post here. Commit a focus slot to "
             "this problem to participate."
         )
+
+
+class ModerationTargetNotFoundError(Exception):
+    """Raised when a hide/restore is attempted on a post/comment id that
+    doesn't exist, or (for comments) doesn't belong to the given post, or
+    (for either) doesn't belong to the given problem."""
+
+    def __init__(self, target_type: str, target_id: str):
+        self.target_type = target_type
+        self.target_id = target_id
+        super().__init__(f"No {target_type} with id {target_id} on this problem.")

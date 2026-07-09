@@ -13,6 +13,7 @@ from app.core.time import utcnow
 from app.models.checkpoint import CommitmentCheckpoint
 from app.models.commitment import Commitment
 from app.models.feed import Comment, FeedPost
+from app.models.moderation import ModerationOverrideEvent
 from app.models.problem import Problem
 from app.models.user import User
 from app.schemas import (
@@ -21,6 +22,7 @@ from app.schemas import (
     CommitmentOut,
     CommittedProblemOut,
     FeedPostOut,
+    ModerationOverrideEventOut,
     ProblemOut,
     UserOut,
 )
@@ -85,6 +87,7 @@ def committed_problem_to_out(commitment: Commitment) -> CommittedProblemOut:
         started_at = started_at.replace(tzinfo=now.tzinfo)
     day_in_cycle = max(0, (now - started_at).days)
     return CommittedProblemOut(
+        commitment_id=commitment.id,
         problem_id=commitment.problem_id,
         role=commitment.role,
         specialization=commitment.specialization,
@@ -126,4 +129,16 @@ def comment_to_out(comment: Comment, author: User) -> CommentOut:
         role_label=role_label(comment.author_role),
         time_ago=time_ago(comment.created_at),
         body=comment.body,
+    )
+
+
+def moderation_event_to_out(event: ModerationOverrideEvent) -> ModerationOverrideEventOut:
+    return ModerationOverrideEventOut(
+        id=event.id,
+        target_type=event.target_type,
+        target_id=event.target_id,
+        action=event.action,
+        performed_by=event.performed_by,
+        reason=event.reason,
+        occurred_at=event.occurred_at,
     )

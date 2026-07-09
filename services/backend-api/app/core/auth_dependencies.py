@@ -7,6 +7,12 @@ depends on. `require_committed_member` (in
 commitment-gated-voice check — kept in `app/services/` rather than here
 because it needs the CommitmentRepoPort, i.e. it's business logic, not
 pure auth plumbing.
+
+`require_platform_admin` (issue #59) also builds on `get_current_user`,
+but — unlike `require_committed_member` — needs no repository port at
+all: `is_platform_admin` is already a field on the `User` row
+`get_current_user` resolved, so the check is pure auth plumbing and
+lives here rather than in `app/services/`.
 """
 
 from fastapi import Depends, HTTPException, status
@@ -56,3 +62,30 @@ def get_current_user(
             detail={"error": "INVALID_TOKEN", "message": "Token does not match a known user."},
         )
     return user
+
+
+def require_platform_admin(current_user: User = Depends(get_current_user)) -> User:
+    """Resolves the caller as before (401 for anything auth-related, via
+    `get_current_user`), then additionally requires
+    `User.is_platform_admin` — or raises 403. Use as a route dependency:
+
+        @router.post(".../moderation/hide")
+        def hide_post(
+            ...,
+            admin: User = Depends(require_platform_admin),
+        ):
+            ...
+
+    There is no way to become a platform admin via any API in this
+    codebase (see `app/models/user.py` docstring) — this dependency is
+    the only place that flag is ever checked, never granted.
+    """
+    if not current_user.is_platform_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "error": "NOT_PLATFORM_ADMIN",
+                "message": "This action requires platform admin privileges.",
+            },
+        )
+    return current_user

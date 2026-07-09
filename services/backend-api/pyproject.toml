@@ -13,6 +13,16 @@ dependencies = [
     "passlib[bcrypt]>=1.7,<2.0",
     "bcrypt>=4.0,<5.0",
     "pyjwt>=2.8,<3.0",
+    # In-memory rate limiting (see app/core/rate_limit.py). Deliberately
+    # NOT Redis-backed: this is a single-VPS solo-dev pilot with no
+    # multi-replica deployment planned (docker-compose.prod.yml runs one
+    # backend-api process), and Redis is currently only used by
+    # ai-coordinator-worker's job queue — adding it as a backend-api
+    # dependency just for rate limiting would be disproportionate. If
+    # this service is ever horizontally scaled, revisit with a
+    # Redis-backed limiter (slowapi supports this via the `limits`
+    # storage backends) so limits are shared across replicas.
+    "slowapi>=0.1.9,<1.0",
 ]
 
 [project.optional-dependencies]

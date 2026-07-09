@@ -61,5 +61,28 @@ class Settings:
         # (issue #8 / Security epic) once refresh tokens exist.
         return 60 * 24 * 7  # 7 days
 
+    @property
+    def cors_allowed_origins(self) -> list[str]:
+        # CORS_ALLOWED_ORIGIN is reserved/documented in .env.example
+        # ("Allowed browser origin for the Backend API's CORS policy in
+        # production ... Leave blank for local dev"). Supports a
+        # comma-separated list (e.g. local dev origin + prod origin)
+        # since a single deployment may legitimately need to allow more
+        # than one origin (e.g. a staging frontend alongside prod).
+        #
+        # Security checklist (TODO.md pre-launch): "CORS configured to
+        # allow only the deployed web frontend origin" — so an unset var
+        # must NOT fall back to allow_origins=["*"]. The one exception is
+        # local dev: default to Vite's default dev port
+        # (services/web/vite.config.ts has no `server.port` override, so
+        # Vite serves on its own default, 5173) so `npm run dev` works
+        # against a locally-run backend out of the box. This fallback is
+        # dev-only — any real deployment must set CORS_ALLOWED_ORIGIN
+        # explicitly, and doing so overrides this default entirely.
+        raw = os.environ.get("CORS_ALLOWED_ORIGIN", "").strip()
+        if not raw:
+            return ["http://localhost:5173"]
+        return [origin.strip() for origin in raw.split(",") if origin.strip()]
+
 
 settings = Settings()

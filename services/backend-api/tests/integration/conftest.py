@@ -25,6 +25,7 @@ from sqlalchemy.pool import StaticPool
 os.environ.setdefault("DATABASE_URL", "postgresql://unused:unused@localhost/unused")
 os.environ.setdefault("JWT_SECRET", "test-jwt-secret-not-for-production")
 
+from app.core.rate_limit import limiter  # noqa: E402
 from app.db.session import get_session  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models import Base  # noqa: E402
@@ -59,6 +60,18 @@ def db_session(engine):
 
 @pytest.fixture()
 def client(engine):
+    """The default test client used by almost every integration test.
+
+    Rate limiting is disabled here (`limiter.enabled = False`): Starlette's
+    `TestClient` makes every request look like it comes from the same
+    fixed "testclient" address, and most of this suite's tests call
+    `/auth/signup` many times per module (fresh users per test) — with
+    the real 5/minute auth limit enforced, later tests in a module would
+    start getting 429s that have nothing to do with what they're
+    actually testing. `test_api_rate_limiting.py` uses a separate
+    `rate_limited_client` fixture (limiter left enabled) to exercise the
+    real limiting behavior in isolation.
+    """
     TestingSessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
 
     def _get_session_override():
@@ -69,6 +82,36 @@ def client(engine):
             session.close()
 
     app.dependency_overrides[get_session] = _get_session_override
+    limiter.enabled = False
+    from fastapi.testclient import TestClient
+
+    with TestClient(app) as test_client:
+        yield test_client
+
+    app.dependency_overrides.clear()
+    limiter.enabled = True
+
+
+@pytest.fixture()
+def rate_limited_client(engine):
+    """Same as `client`, but with rate limiting left ON — for tests that
+    specifically exercise the 429 behavior (see
+    tests/integration/test_api_rate_limiting.py)."""
+    TestingSessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
+
+    def _get_session_override():
+        session = TestingSessionLocal()
+        try:
+            yield session
+        finally:
+            session.close()
+
+    app.dependency_overrides[get_session] = _get_session_override
+    limiter.enabled = True
+    # Reset in-memory limiter storage so leftover hit-counts from any
+    # earlier test (with limiter disabled but still recording, or from a
+    # previous rate-limiting test) don't bleed into this one.
+    limiter.reset()
     from fastapi.testclient import TestClient
 
     with TestClient(app) as test_client:

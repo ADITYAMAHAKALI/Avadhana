@@ -27,6 +27,7 @@ from typing import Protocol
 from app.models.checkpoint import CommitmentCheckpoint
 from app.models.commitment import Commitment
 from app.models.feed import Comment, FeedPost
+from app.models.moderation import ModerationOverrideEvent
 from app.models.problem import Problem
 from app.models.user import User
 
@@ -104,15 +105,44 @@ class CheckpointRepoPort(Protocol):
 class FeedRepoPort(Protocol):
     def add_post(self, post: FeedPost) -> FeedPost: ...
 
-    def list_posts_for_problem(self, problem_id: str) -> list[FeedPost]:
-        """Newest first."""
+    def list_posts_for_problem(
+        self, problem_id: str, *, include_hidden: bool = False
+    ) -> list[FeedPost]:
+        """Newest first. `include_hidden=False` (the default, used by
+        every normal read endpoint) filters `hidden=True` rows out at
+        the query level — hidden content never round-trips to a normal
+        caller. Only the admin-only moderation-log / future "view as
+        admin" paths pass `include_hidden=True`."""
         ...
 
-    def get_post(self, post_id: str) -> FeedPost | None: ...
+    def get_post(self, post_id: str) -> FeedPost | None:
+        """Unfiltered — callers that need to check/act on a post
+        (including moderation) must be able to fetch it regardless of
+        its hidden state."""
+        ...
+
+    def set_post_hidden(self, post_id: str, hidden: bool) -> FeedPost | None:
+        """Flips the denormalized current-state flag. Always called
+        alongside a `ModerationOverrideEvent` insert (see
+        `app/services/moderation_service.py`) — never on its own."""
+        ...
 
     def add_comment(self, comment: Comment) -> Comment: ...
 
-    def list_comments_for_post(self, post_id: str) -> list[Comment]: ...
+    def list_comments_for_post(
+        self, post_id: str, *, include_hidden: bool = False
+    ) -> list[Comment]:
+        """See `list_posts_for_problem` for the `include_hidden`
+        contract."""
+        ...
+
+    def get_comment(self, comment_id: str) -> Comment | None:
+        """Unfiltered, same rationale as `get_post`."""
+        ...
+
+    def set_comment_hidden(self, comment_id: str, hidden: bool) -> Comment | None:
+        """See `set_post_hidden`."""
+        ...
 
     def toggle_like(self, post_id: str, user_id: str) -> int:
         """Toggle: inserts a like if none exists for (post, user), else
@@ -122,10 +152,24 @@ class FeedRepoPort(Protocol):
     def like_count(self, post_id: str) -> int: ...
 
 
+class ModerationRepoPort(Protocol):
+    def add(self, event: ModerationOverrideEvent) -> ModerationOverrideEvent:
+        """Insert-only — never update or delete (CLAUDE.md immutability
+        rule for audit trails), matching CheckpointRepoPort.add."""
+        ...
+
+    def list_for_problem(self, problem_id: str) -> list[ModerationOverrideEvent]:
+        """Every override event for posts/comments belonging to this
+        problem, newest first — backs
+        `GET /problems/{problem_id}/moderation-log`."""
+        ...
+
+
 __all__ = [
     "UserRepoPort",
     "ProblemRepoPort",
     "CommitmentRepoPort",
     "CheckpointRepoPort",
     "FeedRepoPort",
+    "ModerationRepoPort",
 ]
