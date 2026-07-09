@@ -3,15 +3,29 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Install dependencies first for better layer caching.
-# Installed directly (not via `pip install .`) so we don't need the
-# app/ source tree present at this layer, and don't need a package
-# build backend to resolve project metadata.
-COPY pyproject.toml ./
-RUN pip install --no-cache-dir "fastapi>=0.115,<1.0" "uvicorn[standard]>=0.30,<1.0"
+# Runtime deps for psycopg (v3) building/linking against libpq. Kept
+# minimal (no build-essential) since psycopg[binary] ships its own wheel
+# with libpq bundled — this is just for anything that needs a C
+# toolchain transitively. Cheap insurance, removed from the final layer
+# isn't attempted here since this is a single-stage dev/CI image, not a
+# hardened production image.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy application code
+# Install the package (and its pinned dependency list) directly from
+# pyproject.toml, rather than hand-duplicating the dependency list here
+# — avoids the two drifting out of sync as real deps (SQLAlchemy,
+# Alembic, psycopg, etc.) were added.
+COPY pyproject.toml ./
 COPY app/ ./app/
+RUN pip install --no-cache-dir .
+
+# Alembic config + migrations, so `alembic upgrade head` can be run
+# from inside the container (e.g. as a k8s Job or manual exec) against
+# DATABASE_URL.
+COPY alembic.ini ./
+COPY migrations/ ./migrations/
 
 EXPOSE 8000
 

@@ -1,13 +1,36 @@
 [project]
 name = "avadhana-backend-api"
 version = "0.1.0"
-description = "Avadhana Backend API service — minimal skeleton pending real endpoints."
+description = "Avadhana Backend API service — SLC v1 commitment/problem/feed API."
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115,<1.0",
     "uvicorn[standard]>=0.30,<1.0",
+    "sqlalchemy>=2.0,<3.0",
+    "psycopg[binary]>=3.1,<4.0",
+    "alembic>=1.13,<2.0",
+    "pydantic[email]>=2.7,<3.0",
+    "passlib[bcrypt]>=1.7,<2.0",
+    "bcrypt>=4.0,<5.0",
+    "pyjwt>=2.8,<3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0,<9.0",
+    "httpx>=0.27,<1.0",
 ]
 
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+# Restrict discovery to the `app` package — this repo also has a
+# top-level `migrations/` directory (Alembic) and `tests/` directory
+# that are not meant to be installed as importable packages of the
+# distribution.
+include = ["app*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]

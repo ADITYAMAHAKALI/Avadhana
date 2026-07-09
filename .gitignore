@@ -6,6 +6,6 @@
 # Python (services/backend-api, moderation, ai-coordinator-worker, sarvam-mock)
 .venv/
 __pycache__/
-*.pyc
+*.py[cod]
 .pytest_cache/
 *.egg-info/

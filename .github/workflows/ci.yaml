@@ -17,6 +17,14 @@
 #     intentionally generic (infra/k8s/**/*.yaml) rather than a hardcoded
 #     per-service list, so new manifest directories (e.g. backend-api,
 #     ai-coordinator-worker) are picked up automatically as they land.
+#   - test-backend-api: runs the backend-api pytest suite (unit tests
+#     against in-memory fakes + integration tests against an in-memory
+#     SQLite engine — see services/backend-api/tests/). No Postgres
+#     service container is provisioned here on purpose: the test suite
+#     is designed to never require one (see
+#     services/backend-api/tests/integration/conftest.py), which keeps
+#     this job fast and avoids CI-only Postgres version/config drift
+#     from what's actually used in local dev/prod.
 #
 # Runs on every PR (the ask in #53) and also on push to main, so a direct
 # push or a merge commit to main gets the same build/validate signal a PR
@@ -78,3 +86,30 @@ jobs:
           fi
           echo "Validating: ${files[*]}"
           kubeconform -strict -summary "${files[@]}"
+
+  test-backend-api:
+    name: test (backend-api)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend-api with dev dependencies
+        working-directory: services/backend-api
+        run: pip install -e ".[dev]"
+
+      - name: Run pytest
+        working-directory: services/backend-api
+        # DATABASE_URL/JWT_SECRET are required by app.core.config.Settings
+        # at import time but are never actually connected to — the suite
+        # runs entirely against fakes (unit/) and an in-memory SQLite
+        # engine (integration/), see tests/integration/conftest.py.
+        env:
+          DATABASE_URL: "postgresql://unused:unused@localhost/unused"
+          JWT_SECRET: "ci-test-secret-not-for-production-use-only"
+        run: pytest -q
