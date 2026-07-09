@@ -30,3 +30,10 @@ const useReal = hasApiBaseUrl && !forceMock;
 export const currentUserPort = useReal ? new RealCurrentUserPort() : new MockCurrentUserPort();
 export const problemsPort = useReal ? new RealProblemsPort() : new MockProblemsPort();
 export const moderationPort = new MockModerationPort();
+
+/**
+ * Exported so standalone write-action modules (e.g. the problem-creation
+ * screen) can pick real vs. mock behavior without re-deriving the env-var
+ * toggle themselves. Additive — doesn't change any existing export above.
+ */
+export const isUsingRealData = useReal;

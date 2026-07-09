@@ -24,8 +24,17 @@
   color: var(--color-ink-muted);
 }
 
-.searchPlaceholder {
+.searchInput {
+  flex: 1;
+  font-family: inherit;
   font-size: 14.5px;
+  color: var(--color-ink-80);
+  background: transparent;
+  border: none;
+  outline: none;
+}
+
+.searchInput::placeholder {
   color: var(--color-ink-80);
 }
 
@@ -64,19 +73,50 @@
   color: var(--color-ink-80);
 }
 
-.filterChip {
+.filterInput {
+  font-family: inherit;
   font-size: 12.5px;
   color: var(--color-primary-2);
   background: var(--color-surface-white);
   border: 1px solid var(--color-line);
-  padding: 5px 12px;
+  padding: 6px 12px;
   border-radius: var(--radius-pill);
+  width: 160px;
 }
 
-.sortLabel {
-  font-size: 12.5px;
+.filterInput:focus {
+  outline: 2px solid var(--color-saffron);
+  outline-offset: 1px;
+}
+
+.filterInput::placeholder {
   color: var(--color-ink-80);
+}
+
+.clearFilters {
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--color-ink-60);
+  background: transparent;
+  border: none;
+  cursor: pointer;
   margin-left: auto;
+}
+
+.clearFilters:hover {
+  color: var(--color-ink);
+}
+
+.empty {
+  grid-column: 1 / -1;
+  padding: 32px;
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--color-ink-60);
+  background: var(--color-surface-white);
+  border: 1px dashed var(--color-line-strong);
+  border-radius: var(--radius-lg);
 }
 
 .grid {

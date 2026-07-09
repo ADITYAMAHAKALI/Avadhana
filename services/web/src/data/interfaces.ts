@@ -24,8 +24,16 @@ export interface CurrentUserPort {
   getCommitmentHistory(): Promise<CommitmentHistoryEntry[]>;
 }
 
+/** Optional discovery filters — mirrors the backend's GET /problems query params (q/tier/location/category), all optional. */
+export interface DiscoverFilters {
+  q?: string;
+  tier?: string;
+  location?: string;
+  category?: string;
+}
+
 export interface ProblemsPort {
-  listDiscoverable(): Promise<Problem[]>;
+  listDiscoverable(filters?: DiscoverFilters): Promise<Problem[]>;
   getById(problemId: string): Promise<Problem | null>;
   getTasks(problemId: string): Promise<TaskItem[]>;
   getFeed(problemId: string): Promise<FeedPost[]>;

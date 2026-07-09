@@ -7,6 +7,7 @@ import { DashboardPage } from './routes/DashboardPage';
 import { DiscoverPage } from './routes/DiscoverPage';
 import { GraphPage } from './routes/GraphPage';
 import { LoginPage } from './routes/LoginPage';
+import { NewProblemPage } from './routes/NewProblemPage';
 import { ProblemPage } from './routes/ProblemPage';
 import { ProfilePage } from './routes/ProfilePage';
 import { SignupPage } from './routes/SignupPage';
@@ -32,6 +33,7 @@ export default function App() {
               <Routes>
                 <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/discover" element={<DiscoverPage />} />
+                <Route path="/problems/new" element={<NewProblemPage />} />
                 <Route path="/problems/:problemId" element={<ProblemPage />} />
                 <Route path="/graph/:problemId" element={<GraphPage />} />
                 <Route path="/profile" element={<ProfilePage />} />

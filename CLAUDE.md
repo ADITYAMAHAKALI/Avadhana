@@ -43,6 +43,23 @@ Problems are classified into five tiers based on estimated time or money to reso
 
 Tier classification is subjective at creation time and can be re-assessed by committed members as information emerges. This will be a source of friction and disputes—plan for lightweight governance around this.
 
+### Tier Classification Rubric
+
+Concrete, testable ranges for each tier — addresses "Known Unknowns" #4 below. These are starting numbers, not laws of physics: roughly logarithmic scaling between tiers (each tier is ballpark 5-10x the effort of the one below it), calibrated so a Thinker/Actor/Backer can look at a problem and self-classify without a committee. Committed members can propose reclassification if a problem's real scope turns out to not match its initial tier — see lightweight governance note above.
+
+| Tier | Estimated hours to resolution | Estimated funding | Reasoning |
+|------|-------------------------------|--------------------|-----------|
+| **D** | 1–8 hours (a single afternoon) | ₹0 – ₹5,000 (out of pocket, no fundraising needed) | One or two people, one trip, one form, one fix. No coordination overhead. |
+| **C** | 8–40 hours (a few days to two weeks of part-time effort) | ₹5,000 – ₹50,000 | A handful of people, light coordination, maybe a small pooled contribution — still no formal fundraising ask. |
+| **B** | 40–200 hours | ₹50,000 – ₹5,00,000 | A defined local group or neighborhood; needs real task division across Thinker/Actor/Backer roles and sustained weeks-to-months effort. |
+| **A** | 200–1,000 hours | ₹5,00,000 – ₹50,00,000 | City- or districtwide; multiple institutions involved (municipal bodies, schools, local press); typically spans the better part of a 90-day cycle or several cycles. |
+| **S** | 1,000+ hours, often open-ended | ₹50,00,000+ or **no dollar figure at all** — policy change and legal battles are frequently won or lost on time and persistence, not money | Systemic/national scope: policy change, legislation, class-action-scale legal battles. Funding may be irrelevant compared to sustained multi-cycle organizing. |
+
+Notes for use:
+- These are *estimates at creation time*, expected to be wrong often (see "Tier subjectivity" in Critical Open Issues) — the point is a shared vocabulary for the first guess, not a precise forecast.
+- Funding ranges are in INR, reflecting the platform's initial market; treat as illustrative and adjust per-locale once there's real usage data.
+- When hours and funding estimates disagree on tier (e.g., a problem is cheap but takes 300 hours), classify by whichever axis is harder to satisfy — time and money are both scarce, but a problem shouldn't be under-classified just because it happens to be free.
+
 ### Roles Within a Problem
 Users who commit to a problem choose one of three roles:
 - **Thinker**: Research, strategy, framing, proposing approaches. No execution or funding required.

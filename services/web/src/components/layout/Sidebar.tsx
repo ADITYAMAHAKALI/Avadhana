@@ -16,6 +16,7 @@ const ROLE_LABEL: Record<CommittedProblemSummary['role'], string> = {
 const NAV_ITEMS = [
   { to: '/dashboard', label: 'Your focus' },
   { to: '/discover', label: 'Discover problems' },
+  { to: '/problems/new', label: '+ Propose a problem' },
   { to: '/problems/p-groundwater', label: 'Problem workspace' },
   { to: '/graph/p-groundwater', label: 'Problem graph' },
   { to: '/profile', label: 'Your record' },

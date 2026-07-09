@@ -1,23 +1,11 @@
-import type { ProblemsPort } from '../interfaces';
+import type { DiscoverFilters, ProblemsPort } from '../interfaces';
 import type { FeedPost, Problem, ProblemGraphEdge, ProblemGraphNode, TaskItem } from '../../types/domain';
 import { apiFetch, ApiError } from './httpClient';
 
-export interface DiscoverFilters {
-  q?: string;
-  tier?: string;
-  location?: string;
-  category?: string;
-}
+export type { DiscoverFilters };
 
 export class RealProblemsPort implements ProblemsPort {
-  /**
-   * Contract supports q/tier/location/category query params, but no screen
-   * currently wires filter UI through to this call — DiscoverPage's tier
-   * buttons and search bar are presentational only today. Accepting an
-   * optional `filters` arg (not part of the ProblemsPort interface) lets a
-   * future screen opt in without another port change; called with none, this
-   * is just the unfiltered list per the v1 instruction.
-   */
+  /** Backend supports q/tier/location/category query params (all optional); DiscoverPage now wires real filter UI through to this call. */
   async listDiscoverable(filters: DiscoverFilters = {}): Promise<Problem[]> {
     const params = new URLSearchParams();
     if (filters.q) params.set('q', filters.q);
