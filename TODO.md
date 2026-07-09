@@ -10,20 +10,20 @@ Goal: get a *simple, lovable, complete* version of the core loop — sign up →
 
 Build order:
 
-1. [ ] User schema + auth ([#4](https://github.com/ADITYAMAHAKALI/Avadhana/issues/4))
-2. [ ] FocusSlot model + 3-slot enforcement ([#5](https://github.com/ADITYAMAHAKALI/Avadhana/issues/5))
-3. [ ] Commitment creation flow ([#6](https://github.com/ADITYAMAHAKALI/Avadhana/issues/6))
-4. [ ] Commitment-gated authorization middleware ([#8](https://github.com/ADITYAMAHAKALI/Avadhana/issues/8))
-5. [ ] 90-day checkpoint job + UI flow ([#7](https://github.com/ADITYAMAHAKALI/Avadhana/issues/7))
-6. [ ] CommitmentCheckpoint audit log ([#9](https://github.com/ADITYAMAHAKALI/Avadhana/issues/9))
-7. [ ] Problem schema + creation flow ([#11](https://github.com/ADITYAMAHAKALI/Avadhana/issues/11)) — tier set once at creation, no reclassification yet
-8. [ ] Problem search & discovery ([#13](https://github.com/ADITYAMAHAKALI/Avadhana/issues/13))
-9. [ ] Feed core: post / comment / like ([#29](https://github.com/ADITYAMAHAKALI/Avadhana/issues/29))
-10. [ ] Share, open/non-gated ([#30](https://github.com/ADITYAMAHAKALI/Avadhana/issues/30))
-11. [ ] Wire the web frontend off mock data onto the endpoints above (routes already scaffolded: Login, Signup, Dashboard, Discover, Problem, Profile)
-12. [ ] Reputation score computation ([#37](https://github.com/ADITYAMAHAKALI/Avadhana/issues/37)), tied to checkpoint events
-13. [ ] Deploy to a single VPS via Docker Compose — see Deployment note below
-14. [ ] Recruit the 5–10 real local problems the spec calls for (Section 10) and pilot
+1. [x] User schema + auth ([#4](https://github.com/ADITYAMAHAKALI/Avadhana/issues/4))
+2. [x] FocusSlot model + 3-slot enforcement ([#5](https://github.com/ADITYAMAHAKALI/Avadhana/issues/5))
+3. [x] Commitment creation flow ([#6](https://github.com/ADITYAMAHAKALI/Avadhana/issues/6))
+4. [x] Commitment-gated authorization middleware ([#8](https://github.com/ADITYAMAHAKALI/Avadhana/issues/8))
+5. [ ] 90-day checkpoint job + UI flow ([#7](https://github.com/ADITYAMAHAKALI/Avadhana/issues/7)) — backend done, no frontend screen yet
+6. [x] CommitmentCheckpoint audit log ([#9](https://github.com/ADITYAMAHAKALI/Avadhana/issues/9))
+7. [x] Problem schema + creation flow ([#11](https://github.com/ADITYAMAHAKALI/Avadhana/issues/11)) — tier set once at creation, no reclassification yet
+8. [ ] Problem search & discovery ([#13](https://github.com/ADITYAMAHAKALI/Avadhana/issues/13)) — backend filters done, Discover page UI not wired to them yet
+9. [ ] Feed core: post / comment / like ([#29](https://github.com/ADITYAMAHAKALI/Avadhana/issues/29)) — post/like done end-to-end, comment UI still missing
+10. [x] Share, open/non-gated ([#30](https://github.com/ADITYAMAHAKALI/Avadhana/issues/30))
+11. [x] Wire the web frontend off mock data onto the endpoints above (routes already scaffolded: Login, Signup, Dashboard, Discover, Problem, Profile) — real ports live behind `VITE_API_BASE_URL`, mock stays default for zero-setup `npm run dev`
+12. [x] Reputation score computation ([#37](https://github.com/ADITYAMAHAKALI/Avadhana/issues/37)), tied to checkpoint events
+13. [x] Deploy to a single VPS via Docker Compose — see Deployment note below — `docker-compose.prod.yml` + `docs/vps-deployment.md` scaffolded; not yet actually deployed to a real VPS
+14. [ ] Recruit the 5–10 real local problems the spec calls for (Section 10) and pilot — not started, not an engineering task
 
 **Deferred to post-v1** (revisit once the pilot validates the core mechanic and problem/discussion volume justifies the build cost):
 
@@ -57,20 +57,20 @@ Build order:
 
 User, focus slots, commitments, 90-day lock.
 
-- [ ] [Design User schema](https://github.com/ADITYAMAHAKALI/Avadhana/issues/4)
-- [ ] [Implement FocusSlot model + 3-slot enforcement](https://github.com/ADITYAMAHAKALI/Avadhana/issues/5)
-- [ ] [Implement Commitment creation flow](https://github.com/ADITYAMAHAKALI/Avadhana/issues/6)
-- [ ] [Implement 90-day checkpoint job + UI flow](https://github.com/ADITYAMAHAKALI/Avadhana/issues/7)
-- [ ] [Implement commitment-gated authorization middleware](https://github.com/ADITYAMAHAKALI/Avadhana/issues/8)
-- [ ] [CommitmentCheckpoint audit log](https://github.com/ADITYAMAHAKALI/Avadhana/issues/9)
+- [x] [Design User schema](https://github.com/ADITYAMAHAKALI/Avadhana/issues/4) — SQLAlchemy model + JWT auth (signup/login), bcrypt password hashing
+- [x] [Implement FocusSlot model + 3-slot enforcement](https://github.com/ADITYAMAHAKALI/Avadhana/issues/5) — computed from active-commitment count (not a separate table); verified live: 4th commitment hard-blocked with 409 SLOT_LIMIT_EXCEEDED
+- [x] [Implement Commitment creation flow](https://github.com/ADITYAMAHAKALI/Avadhana/issues/6) — `POST /problems/{id}/commitments`, wired end-to-end through CommitModal in the web frontend
+- [ ] [Implement 90-day checkpoint job + UI flow](https://github.com/ADITYAMAHAKALI/Avadhana/issues/7) — backend done (`POST /commitments/{id}/checkpoint`: resolve/abandon/continue, lock enforced with no bypass, verified at day-89/90/91 boundaries); no frontend screen yet, and "job" is computed-on-read rather than a scheduled sweep (no notification system exists to page a scheduled job into) — remaining: a checkpoint UI screen
+- [x] [Implement commitment-gated authorization middleware](https://github.com/ADITYAMAHAKALI/Avadhana/issues/8) — reusable `require_committed_member` FastAPI dependency; verified live: non-member POST blocked with 403 NOT_COMMITTED, committed member succeeds
+- [x] [CommitmentCheckpoint audit log](https://github.com/ADITYAMAHAKALI/Avadhana/issues/9) — insert-only, every transition logged, `GET /commitments/{id}/checkpoints`
 
 ## [Problem Management & Hierarchy](https://github.com/ADITYAMAHAKALI/Avadhana/issues/10)
 
 Problems, tiers, search, split/merge.
 
-- [ ] [Problem schema + creation flow](https://github.com/ADITYAMAHAKALI/Avadhana/issues/11) — SLC v1
-- [ ] [Tier classification rubric (S–D)](https://github.com/ADITYAMAHAKALI/Avadhana/issues/12) — SLC v1 (needed to set tier at creation)
-- [ ] [Problem search & discovery](https://github.com/ADITYAMAHAKALI/Avadhana/issues/13) — SLC v1
+- [x] [Problem schema + creation flow](https://github.com/ADITYAMAHAKALI/Avadhana/issues/11) — SLC v1 — minimal schema (title/summary/location/category/tier), no hierarchy yet (`parentProblemTitle` hardcoded null); wired end-to-end in the web frontend
+- [ ] [Tier classification rubric (S–D)](https://github.com/ADITYAMAHAKALI/Avadhana/issues/12) — SLC v1 (needed to set tier at creation) — the tier field itself works (accepts S/A/B/C/D at creation), but no concrete rubric doc (hour/funding thresholds per tier) exists yet, so classification is still subjective per-user judgment — see CLAUDE.md "Known Unknowns" #4
+- [ ] [Problem search & discovery](https://github.com/ADITYAMAHAKALI/Avadhana/issues/13) — SLC v1 — backend done (`GET /problems` with `q`/`tier`/`location`/`category` filters); DiscoverPage's filter UI is still presentational-only, not wired to the real query params yet
 - [ ] [Tier reclassification governance flow](https://github.com/ADITYAMAHAKALI/Avadhana/issues/14) — post-v1
 - [ ] [Problem split mechanic](https://github.com/ADITYAMAHAKALI/Avadhana/issues/15) — post-v1
 - [ ] [Problem merge mechanic + conflict detection](https://github.com/ADITYAMAHAKALI/Avadhana/issues/16) — post-v1
@@ -92,8 +92,8 @@ Summarization, checklist generation, off-topic detection, moderation. Deferred u
 
 ## [Problem-Specific Feed & Interactions](https://github.com/ADITYAMAHAKALI/Avadhana/issues/28)
 
-- [ ] [Feed core: post / comment / like](https://github.com/ADITYAMAHAKALI/Avadhana/issues/29) — SLC v1
-- [ ] [Share (open, non-gated)](https://github.com/ADITYAMAHAKALI/Avadhana/issues/30) — SLC v1
+- [ ] [Feed core: post / comment / like](https://github.com/ADITYAMAHAKALI/Avadhana/issues/29) — SLC v1 — post/like done end-to-end (backend gating verified live, wired through the web frontend); comments have a working, gated backend endpoint but no frontend UI yet (no `Comment` type existed in the mockup to wire against)
+- [x] [Share (open, non-gated)](https://github.com/ADITYAMAHAKALI/Avadhana/issues/30) — SLC v1 — no dedicated endpoint needed; all problem/feed GETs are public/unauthenticated by design, verified live
 - [ ] [Polls](https://github.com/ADITYAMAHAKALI/Avadhana/issues/31) — post-v1
 - [ ] [Task board: create / pick up / handover tasks](https://github.com/ADITYAMAHAKALI/Avadhana/issues/32) — post-v1
 - [ ] [Asset uploads](https://github.com/ADITYAMAHAKALI/Avadhana/issues/33) — post-v1
@@ -104,15 +104,15 @@ Summarization, checklist generation, off-topic detection, moderation. Deferred u
 Rewards follow-through, not activity — do not build a second engagement-farming loop.
 
 - [ ] [Badge schema + award rules](https://github.com/ADITYAMAHAKALI/Avadhana/issues/36) — post-v1
-- [ ] [Reputation score computation](https://github.com/ADITYAMAHAKALI/Avadhana/issues/37) — SLC v1 (movement on resolve/abandon events only)
-- [ ] [Profile page](https://github.com/ADITYAMAHAKALI/Avadhana/issues/38) — SLC v1 (already scaffolded in web frontend against mock data)
+- [x] [Reputation score computation](https://github.com/ADITYAMAHAKALI/Avadhana/issues/37) — SLC v1 — flat deltas on checkpoint events only (resolve +20, abandon -15, continue +0), verified never moves on posts/likes; tier-weighting deferred (post-v1, needs badges work too)
+- [x] [Profile page](https://github.com/ADITYAMAHAKALI/Avadhana/issues/38) — SLC v1 — wired to real data via `CurrentUserPort` (committed problems, commitment history, reputation)
 
 ## [Security & Moderation Safety](https://github.com/ADITYAMAHAKALI/Avadhana/issues/55)
 
-- [ ] [API key & secrets management policy](https://github.com/ADITYAMAHAKALI/Avadhana/issues/56) — SLC v1
-- [ ] [Immutable audit logging for moderation actions](https://github.com/ADITYAMAHAKALI/Avadhana/issues/57) — SLC v1
+- [x] [API key & secrets management policy](https://github.com/ADITYAMAHAKALI/Avadhana/issues/56) — SLC v1 — `docs/security-policy.md`
+- [x] [Immutable audit logging for moderation actions](https://github.com/ADITYAMAHAKALI/Avadhana/issues/57) — SLC v1 — established as the pattern via `CommitmentCheckpoint` (insert-only, never updated/deleted); no moderation actions exist yet to log (AI moderation is post-v1), so this is the principle + a working example, not moderation-specific logging itself
 - [ ] [Appeal fraud throttling](https://github.com/ADITYAMAHAKALI/Avadhana/issues/58) — post-v1 (no appeals to throttle until AI moderation is live)
-- [ ] [Human override for moderators](https://github.com/ADITYAMAHAKALI/Avadhana/issues/59) — SLC v1 (baseline override capability, ahead of full AI moderation)
+- [ ] [Human override for moderators](https://github.com/ADITYAMAHAKALI/Avadhana/issues/59) — SLC v1 (baseline override capability, ahead of full AI moderation) — not yet built, no moderation exists to override
 
 ## [Web Frontend (React)](https://github.com/ADITYAMAHAKALI/Avadhana/issues/60)
 
