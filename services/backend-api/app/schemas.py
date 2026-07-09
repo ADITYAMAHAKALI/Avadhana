@@ -28,6 +28,8 @@ CommitmentStatusOut = Literal["active", "resolved", "abandoned"]
 CheckpointAction = Literal["resolve", "abandon", "continue"]
 CheckpointEventOut = Literal["created", "resolved", "abandoned", "continued"]
 HistoryStatus = Literal["resolved", "continued", "abandoned"]
+ModerationTargetTypeOut = Literal["post", "comment"]
+ModerationActionOut = Literal["hidden", "restored"]
 
 
 class CamelModel(BaseModel):
@@ -196,6 +198,23 @@ class CommentOut(CamelModel):
 
 class LikeOut(CamelModel):
     like_count: int
+
+
+# --- Moderation (issue #59: human moderator override baseline) ------------
+
+
+class ModerationActionRequest(CamelModel):
+    reason: str | None = Field(default=None, max_length=1000)
+
+
+class ModerationOverrideEventOut(CamelModel):
+    id: str
+    target_type: ModerationTargetTypeOut
+    target_id: str
+    action: ModerationActionOut
+    performed_by: str
+    reason: str | None
+    occurred_at: datetime
 
 
 # --- Error payloads (documented shapes, not enforced via response_model

@@ -9,12 +9,23 @@ Visitor Flow").
 
 Polls, task board, asset uploads, and donations are explicitly out of
 scope for SLC v1 (see backend-build brief's "Explicit scope boundaries").
+
+`hidden` (issue #59, human moderation override baseline): a simple,
+mutable, denormalized current-state flag — same pattern as
+`Commitment.status` being mutable while its audit trail
+(`CommitmentCheckpoint`) is immutable. The actual audit trail for hide/
+restore actions lives in `app.models.moderation.ModerationOverrideEvent`
+(insert-only); this flag is just the fast-to-query "is this currently
+hidden" projection used to filter normal feed reads. Never mutate this
+column directly outside `app/services/moderation_service.py` — always
+go through it so a `ModerationOverrideEvent` row is written alongside
+the flip.
 """
 
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.time import utcnow
@@ -40,6 +51,7 @@ class FeedPost(Base):
     # not a retroactive relabeling of what they said).
     author_role: Mapped[str] = mapped_column(String(20), nullable=False)
     body: Mapped[str] = mapped_column(String(5000), nullable=False)
+    hidden: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=utcnow
@@ -85,6 +97,7 @@ class Comment(Base):
     )
     author_role: Mapped[str] = mapped_column(String(20), nullable=False)
     body: Mapped[str] = mapped_column(String(2000), nullable=False)
+    hidden: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=utcnow

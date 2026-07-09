@@ -12,6 +12,7 @@ SQL, no ORM session, no Postgres/SQLite. This is what lets
 from app.models.checkpoint import CheckpointEventType, CommitmentCheckpoint
 from app.models.commitment import Commitment, CommitmentStatus
 from app.models.feed import Comment, FeedPost, PostLike
+from app.models.moderation import ModerationOverrideEvent
 from app.models.problem import Problem
 from app.models.user import User
 
@@ -153,20 +154,45 @@ class FakeFeedRepo:
         self.posts[post.id] = post
         return post
 
-    def list_posts_for_problem(self, problem_id: str) -> list[FeedPost]:
+    def list_posts_for_problem(
+        self, problem_id: str, *, include_hidden: bool = False
+    ) -> list[FeedPost]:
         posts = [p for p in self.posts.values() if p.problem_id == problem_id]
+        if not include_hidden:
+            posts = [p for p in posts if not p.hidden]
         return sorted(posts, key=lambda p: p.created_at, reverse=True)
 
     def get_post(self, post_id: str) -> FeedPost | None:
         return self.posts.get(post_id)
 
+    def set_post_hidden(self, post_id: str, hidden: bool) -> FeedPost | None:
+        post = self.posts.get(post_id)
+        if post is None:
+            return None
+        post.hidden = hidden
+        return post
+
     def add_comment(self, comment: Comment) -> Comment:
         self.comments[comment.id] = comment
         return comment
 
-    def list_comments_for_post(self, post_id: str) -> list[Comment]:
+    def list_comments_for_post(
+        self, post_id: str, *, include_hidden: bool = False
+    ) -> list[Comment]:
         comments = [c for c in self.comments.values() if c.post_id == post_id]
+        if not include_hidden:
+            comments = [c for c in comments if not c.hidden]
         return sorted(comments, key=lambda c: c.created_at)
+
+    def get_comment(self, comment_id: str) -> Comment | None:
+        return self.comments.get(comment_id)
+
+    def set_comment_hidden(self, comment_id: str, hidden: bool) -> Comment | None:
+        comment = self.comments.get(comment_id)
+        if comment is None:
+            return None
+        comment.hidden = hidden
+        return comment
 
     def toggle_like(self, post_id: str, user_id: str) -> int:
         existing = next(
@@ -181,3 +207,20 @@ class FakeFeedRepo:
 
     def like_count(self, post_id: str) -> int:
         return sum(1 for like in self.likes if like.post_id == post_id)
+
+
+class FakeModerationRepo:
+    def __init__(self):
+        self.events: list[ModerationOverrideEvent] = []
+
+    def add(self, event: ModerationOverrideEvent) -> ModerationOverrideEvent:
+        self.events.append(event)
+        return event
+
+    def list_for_problem(self, problem_id: str) -> list[ModerationOverrideEvent]:
+        # The fake doesn't need to resolve problem_id -> target ids the
+        # way the real repo does (it has no FeedRepo to cross-reference);
+        # tests exercising `list_for_problem` construct events directly
+        # and assert against `self.events` order instead. Kept here only
+        # so FakeModerationRepo structurally satisfies ModerationRepoPort.
+        return sorted(self.events, key=lambda e: e.occurred_at, reverse=True)

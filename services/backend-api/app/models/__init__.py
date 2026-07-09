@@ -11,6 +11,7 @@ from app.db.base import Base
 from app.models.checkpoint import CommitmentCheckpoint
 from app.models.commitment import Commitment
 from app.models.feed import Comment, FeedPost, PostLike
+from app.models.moderation import ModerationOverrideEvent
 from app.models.problem import Problem
 from app.models.user import User
 
@@ -23,4 +24,5 @@ __all__ = [
     "FeedPost",
     "PostLike",
     "Comment",
+    "ModerationOverrideEvent",
 ]
