@@ -25,6 +25,14 @@
 #     services/backend-api/tests/integration/conftest.py), which keeps
 #     this job fast and avoids CI-only Postgres version/config drift
 #     from what's actually used in local dev/prod.
+#   - test-ai-coordinator-worker: runs the ai-coordinator-worker pytest
+#     suite (SARVAM client + config tests — see
+#     services/ai-coordinator-worker/tests/). Added after discovering
+#     these tests existed but nothing ran them in CI; `pip install
+#     -e ".[dev]"` also failed outright locally until
+#     services/ai-coordinator-worker/pyproject.toml declared its package
+#     layout explicitly (flat-layout auto-discovery can't disambiguate
+#     impl/ vs interfaces/ on its own).
 #   - validate-compose: docker-compose.prod.yml (the SLC v1 single-VPS pilot
 #     deploy, see docs/vps-deployment.md) is syntax/schema-validated with
 #     `docker compose config`. This only catches malformed YAML / invalid
@@ -120,6 +128,26 @@ jobs:
         env:
           DATABASE_URL: "postgresql://unused:unused@localhost/unused"
           JWT_SECRET: "ci-test-secret-not-for-production-use-only"
+        run: pytest -q
+
+  test-ai-coordinator-worker:
+    name: test (ai-coordinator-worker)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ai-coordinator-worker with dev dependencies
+        working-directory: services/ai-coordinator-worker
+        run: pip install -e ".[dev]"
+
+      - name: Run pytest
+        working-directory: services/ai-coordinator-worker
         run: pytest -q
 
   validate-compose:

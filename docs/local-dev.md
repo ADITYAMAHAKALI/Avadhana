@@ -45,7 +45,8 @@ This one command (see the root `Makefile`, issue #52):
 4. Applies the Postgres and Redis manifests and waits for both to be ready.
 5. Builds every service's container image with Podman (`backend-api`, `moderation`, `ai-coordinator-worker`, `sarvam-mock`).
 6. Loads the images that have k8s manifests (`backend-api`, `ai-coordinator-worker`, `sarvam-mock`) into the kind node — `moderation` still builds and runs standalone for now (no manifest yet; it isn't split out of the backend yet).
-7. Applies the Backend API, AI Coordinator Worker, and SARVAM mock manifests and waits for all three to be ready.
+7. Applies the Backend API, AI Coordinator Worker, and SARVAM mock manifests, force-restarts all three Deployments (needed because they reference a static `:dev` image tag — `kubectl apply` alone won't roll pods onto a freshly built image if the manifest text didn't change), and waits for all three to be ready.
+8. Runs `alembic upgrade head` inside the `backend-api` pod (`make migrate`) so the schema actually exists — the container ships Alembic specifically for this, but nothing ran it automatically before this step existed. Safe to re-run any time; Alembic no-ops once the schema is current.
 
 Takes a few minutes on first run (image builds, cluster bootstrap); subsequent runs are much faster since Podman caches image layers and `kind create cluster` / `kubectl apply` are no-ops if the cluster/resources already exist.
 
@@ -88,9 +89,13 @@ podman tag localhost/avadhana/backend-api:dev docker.io/avadhana/backend-api:dev
 podman save docker.io/avadhana/backend-api:dev -o /tmp/avadhana-backend-api.tar
 kind load image-archive /tmp/avadhana-backend-api.tar --name avadhana-dev
 kubectl rollout restart deployment/backend-api -n avadhana-dev
+kubectl rollout status deployment/backend-api -n avadhana-dev --timeout=120s
+make migrate   # only needed if you added/changed a model + migration
 ```
 
 (The retag-before-save step matters — see the comment above `load-images` in the `Makefile` for why: Podman's local image store tags builds as `localhost/...`, but the kind node's containerd resolves a bare `avadhana/<service>:dev` image ref against `docker.io/...`. Skip it and you'll get `ImagePullBackOff`.)
+
+Just re-running `make dev-up` does all of this for every service in one shot (rebuild, reload, restart, migrate) — the manual sequence above is only worth it when you want to iterate on a single service without waiting on the others.
 
 ## 7. CI
 
@@ -106,3 +111,4 @@ kubeconform -strict -summary infra/k8s/**/*.yaml
 - **`make dev-up` hangs on a `rollout status` step** — check `make dev-status` and `make dev-logs SERVICE=<name>` for the stuck pod. A common cause is a stale/missing Secret — re-run `./infra/k8s/scripts/create-secrets.sh` after confirming `.env` has all required values.
 - **`ImagePullBackOff` on a freshly built image** — you likely skipped the `docker.io/` retag step; see section 6 above.
 - **`kind`/`podman` command not found or can't connect** — confirm `podman machine list` shows a running machine, and that `KIND_EXPERIMENTAL_PROVIDER=podman` is exported in your current shell.
+- **`/healthz` returns 200 but every real endpoint 500s with `relation "users" does not exist` (or similar)** — the schema was never migrated. `make dev-up` runs `make migrate` automatically now, but if you're driving the individual Make targets by hand (or exec'd into an old pod), run `make migrate` yourself.

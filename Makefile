@@ -19,9 +19,9 @@ DEPLOYED_SERVICES := backend-api ai-coordinator-worker sarvam-mock
 # All buildable services, deployed or not — kept in sync with .github/workflows/ci.yaml's build matrix.
 ALL_SERVICES := backend-api moderation ai-coordinator-worker sarvam-mock
 
-.PHONY: dev-up dev-down dev-status dev-logs cluster-up secrets build-images load-images apply-data apply-apps
+.PHONY: dev-up dev-down dev-status dev-logs cluster-up secrets build-images load-images apply-data apply-apps migrate
 
-dev-up: cluster-up secrets apply-data build-images load-images apply-apps
+dev-up: cluster-up secrets apply-data build-images load-images apply-apps migrate
 	@echo ""
 	@echo "Avadhana local dev stack is up in namespace $(NAMESPACE)."
 	@echo "Reach the Backend API with:"
@@ -91,6 +91,26 @@ apply-apps:
 	kubectl apply -f infra/k8s/backend-api/
 	kubectl apply -f infra/k8s/ai-coordinator-worker/
 	kubectl apply -f infra/k8s/sarvam-mock/
+	# Deployments reference a static `:dev` tag, so `kubectl apply` alone
+	# won't roll pods onto a freshly built image when the manifest itself
+	# didn't change (which is every run of this target) — force a restart
+	# so `make dev-up` always serves the code that was just built, not
+	# whatever was running before. Without this, a stale pod can silently
+	# keep running for hours after a code change, health checks still
+	# green throughout since /healthz doesn't reflect app code freshness.
+	kubectl rollout restart deployment/backend-api -n $(NAMESPACE)
+	kubectl rollout restart deployment/ai-coordinator-worker -n $(NAMESPACE)
+	kubectl rollout restart deployment/sarvam-mock -n $(NAMESPACE)
 	kubectl rollout status deployment/backend-api -n $(NAMESPACE) --timeout=120s
 	kubectl rollout status deployment/ai-coordinator-worker -n $(NAMESPACE) --timeout=120s
 	kubectl rollout status deployment/sarvam-mock -n $(NAMESPACE) --timeout=120s
+
+# The Containerfile ships alembic.ini + migrations/ specifically so this
+# can run from inside the running container (see services/backend-api/
+# Containerfile) — nothing applied the schema automatically before this
+# target existed, so a freshly-applied backend-api pod would report
+# healthy on /healthz while every real endpoint 500'd with
+# "relation ... does not exist". Runs after apply-apps so the Deployment
+# is guaranteed to exist and be ready first.
+migrate:
+	kubectl exec -n $(NAMESPACE) deploy/backend-api -- alembic upgrade head

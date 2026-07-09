@@ -17,3 +17,20 @@ dev = [
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+# Without this, `pip install -e ".[dev]"` fails outright: setuptools sees
+# two top-level packages (impl/, interfaces/) in a flat layout and refuses
+# to guess which one is "the" package (see backend-api/pyproject.toml for
+# the same pattern). Include both explicitly.
+include = ["impl*", "interfaces*"]
+
+[tool.setuptools]
+# worker.py and sarvam_config.py are loose top-level modules (not inside
+# a package dir) — must be listed explicitly too, or they're silently
+# excluded from the install and `import worker` / `import sarvam_config`
+# fails for anything that imports them (e.g. tests/test_sarvam_config.py).
+py-modules = ["worker", "sarvam_config"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
