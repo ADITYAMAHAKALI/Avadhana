@@ -25,6 +25,14 @@
 #     services/backend-api/tests/integration/conftest.py), which keeps
 #     this job fast and avoids CI-only Postgres version/config drift
 #     from what's actually used in local dev/prod.
+#   - validate-compose: docker-compose.prod.yml (the SLC v1 single-VPS pilot
+#     deploy, see docs/vps-deployment.md) is syntax/schema-validated with
+#     `docker compose config`. This only catches malformed YAML / invalid
+#     Compose schema (bad keys, unresolvable `build:` context paths) — it
+#     does NOT build or run the actual stack, which is out of scope for CI
+#     (slow, and the real target is a VPS, not a CI runner). A dummy .env is
+#     generated from .env.example just so variable interpolation doesn't
+#     fail; no real secrets are used or required.
 #
 # Runs on every PR (the ask in #53) and also on push to main, so a direct
 # push or a merge commit to main gets the same build/validate signal a PR
@@ -113,3 +121,16 @@ jobs:
           DATABASE_URL: "postgresql://unused:unused@localhost/unused"
           JWT_SECRET: "ci-test-secret-not-for-production-use-only"
         run: pytest -q
+
+  validate-compose:
+    name: validate docker-compose.prod.yml
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate dummy .env for variable interpolation
+        run: cp .env.example .env
+
+      - name: Validate docker-compose.prod.yml syntax
+        run: docker compose -f docker-compose.prod.yml config --quiet

@@ -1,0 +1,215 @@
+# docker-compose.prod.yml — single-VPS deployment for the Avadhana SLC v1 pilot.
+#
+# See docs/vps-deployment.md for the full runbook (provisioning, .env setup,
+# migrations, backups, rollback). See CLAUDE.md "Local Development
+# Environment" for why local dev uses Kubernetes-via-Podman instead: this
+# file is deliberately NOT Kubernetes — a single VPS + Compose is the
+# right-sized target for an unvalidated 5-10 problem pilot, per the SLC v1
+# release plan. Every app service below builds from the SAME Containerfile
+# already used for local k8s dev (services/<name>/Containerfile) — nothing
+# is duplicated or rewritten here, this file only adds orchestration,
+# volumes, and networking on top.
+#
+# Services intentionally NOT included:
+#   - moderation: still a placeholder skeleton, not deployed even in local
+#     k8s dev yet (no manifest exists there either). Left out here for the
+#     same reason — nothing calls it yet. Add it (and a manifest-equivalent
+#     service block) once it's actually split out of backend-api and has
+#     real off-topic-detection logic (see AI Coordination Layer epic #18).
+#
+# Env vars: sourced from a root-level .env (gitignored, copy from
+# .env.example and fill real values — see docs/vps-deployment.md). Variable
+# names match .env.example exactly; no new names invented here except
+# CORS_ALLOWED_ORIGIN and CADDY_DOMAIN/CADDY_EMAIL, which are documented in
+# .env.example under a "--- VPS / prod deployment ---" section.
+
+name: avadhana-prod
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      # Avoids postgres writing data directly into the volume's lost+found
+      # dir — same fix as infra/k8s/postgres/statefulset.yaml.
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - avadhana
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # No named volume: Redis here is only the RQ job-queue broker for the AI
+    # Coordinator Worker (see .env.example REDIS_URL). Queued jobs are
+    # transient, re-enqueued on the next AI coordinator invocation (every
+    # 3-6 hours per CLAUDE.md), and the pilot's core commitment data lives
+    # in Postgres, not Redis. Losing in-flight queue state on a container
+    # restart is an acceptable trade for one fewer volume to back up during
+    # the pilot. Revisit if Redis ever holds anything durable (e.g. cache
+    # that's expensive to rebuild, session state) beyond the job queue.
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    networks:
+      - avadhana
+
+  backend-api:
+    build:
+      context: services/backend-api
+      dockerfile: Containerfile
+    restart: unless-stopped
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT}
+      LOG_LEVEL: ${LOG_LEVEL}
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      SARVAM_API_KEY: ${SARVAM_API_KEY}
+      SARVAM_API_BASE_URL: ${SARVAM_API_BASE_URL}
+      SARVAM_USE_MOCK: ${SARVAM_USE_MOCK}
+      CORS_ALLOWED_ORIGIN: ${CORS_ALLOWED_ORIGIN}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - avadhana
+    # No host port published here — backend-api is reached only through the
+    # edge/reverse-proxy service below (or through web's nginx, see that
+    # service's comment). See docs/vps-deployment.md "Network topology" for
+    # the full reasoning. Uncomment to expose directly on the host for
+    # debugging:
+    # ports:
+    #   - "8000:8000"
+
+  ai-coordinator-worker:
+    build:
+      context: services/ai-coordinator-worker
+      dockerfile: Containerfile
+    restart: unless-stopped
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT}
+      LOG_LEVEL: ${LOG_LEVEL}
+      REDIS_URL: ${REDIS_URL}
+      AI_COORDINATOR_INVOCATION_INTERVAL_HOURS: ${AI_COORDINATOR_INVOCATION_INTERVAL_HOURS}
+      SARVAM_API_KEY: ${SARVAM_API_KEY}
+      SARVAM_API_BASE_URL: ${SARVAM_API_BASE_URL}
+      SARVAM_USE_MOCK: ${SARVAM_USE_MOCK}
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - avadhana
+    # No exposed port — background RQ worker only, same as
+    # infra/k8s/ai-coordinator-worker/deployment.yaml.
+
+  sarvam-mock:
+    build:
+      context: services/sarvam-mock
+      dockerfile: Containerfile
+    restart: unless-stopped
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT}
+      LOG_LEVEL: ${LOG_LEVEL}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/healthz')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - avadhana
+    # Only reached internally by backend-api / ai-coordinator-worker when
+    # SARVAM_USE_MOCK=true. Keep SARVAM_USE_MOCK=true for the SLC v1 pilot
+    # itself (AI Coordination is explicitly deferred — see TODO.md); this
+    # service can be dropped from the stack once real SARVAM calls are
+    # un-deferred and SARVAM_USE_MOCK=false in production, or left running
+    # harmlessly since nothing calls it when mocking is off.
+
+  web:
+    build:
+      context: services/web
+      dockerfile: Containerfile
+    restart: unless-stopped
+    depends_on:
+      backend-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8082/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - avadhana
+    # No host port published here either when the optional `edge` (Caddy)
+    # service is enabled below — Caddy terminates TLS and proxies to web on
+    # the internal network. If you are NOT using the edge service (no domain
+    # configured yet), uncomment this to reach the frontend directly:
+    # ports:
+    #   - "8082:8082"
+
+  # --- Optional: edge reverse proxy / TLS termination ---
+  # Caddy in front of `web` (which itself only serves static files — it does
+  # NOT proxy to backend-api, see services/web/nginx.conf) and `backend-api`.
+  # This is the "TLS/HTTPS terminated ... at the VPS reverse proxy (deployed)"
+  # requirement from the pre-launch Security Checklist. Caddy gets automatic
+  # Let's Encrypt certificates for free when CADDY_DOMAIN is a real DNS name
+  # pointed at this VPS's IP.
+  #
+  # This service is OPTIONAL and commented out by default because there is
+  # no real domain yet to test it against. To enable:
+  #   1. Point a DNS A record at the VPS's public IP.
+  #   2. Set CADDY_DOMAIN and CADDY_EMAIL in .env.
+  #   3. Uncomment the `edge` service below and the Caddyfile it references
+  #      (create deploy/Caddyfile — see docs/vps-deployment.md for a sample).
+  #   4. Remove/re-comment the `ports:` blocks on `web` and `backend-api`
+  #      above so they are only reachable through Caddy, not directly.
+  #
+  # edge:
+  #   image: caddy:2-alpine
+  #   restart: unless-stopped
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   environment:
+  #     CADDY_DOMAIN: ${CADDY_DOMAIN}
+  #     CADDY_EMAIL: ${CADDY_EMAIL}
+  #   volumes:
+  #     - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+  #     - caddy-data:/data
+  #     - caddy-config:/config
+  #   depends_on:
+  #     - web
+  #     - backend-api
+  #   networks:
+  #     - avadhana
+
+networks:
+  avadhana:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  # caddy-data:
+  # caddy-config:
