@@ -78,6 +78,7 @@ class FocusSlotsOut(CamelModel):
 
 
 class CommittedProblemOut(CamelModel):
+    commitment_id: str
     problem_id: str
     role: Role
     specialization: Specialization | None

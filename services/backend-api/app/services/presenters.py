@@ -87,6 +87,7 @@ def committed_problem_to_out(commitment: Commitment) -> CommittedProblemOut:
         started_at = started_at.replace(tzinfo=now.tzinfo)
     day_in_cycle = max(0, (now - started_at).days)
     return CommittedProblemOut(
+        commitment_id=commitment.id,
         problem_id=commitment.problem_id,
         role=commitment.role,
         specialization=commitment.specialization,
