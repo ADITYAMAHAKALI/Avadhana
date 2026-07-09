@@ -14,11 +14,11 @@ Build order:
 2. [x] FocusSlot model + 3-slot enforcement ([#5](https://github.com/ADITYAMAHAKALI/Avadhana/issues/5))
 3. [x] Commitment creation flow ([#6](https://github.com/ADITYAMAHAKALI/Avadhana/issues/6))
 4. [x] Commitment-gated authorization middleware ([#8](https://github.com/ADITYAMAHAKALI/Avadhana/issues/8))
-5. [ ] 90-day checkpoint job + UI flow ([#7](https://github.com/ADITYAMAHAKALI/Avadhana/issues/7)) — backend done, no frontend screen yet
+5. [x] 90-day checkpoint job + UI flow ([#7](https://github.com/ADITYAMAHAKALI/Avadhana/issues/7)) — `CheckpointModal` (resolve/abandon/continue) wired to a per-commitment "checkpoint due" affordance on the dashboard once `dayInCycle >= cycleLengthDays`
 6. [x] CommitmentCheckpoint audit log ([#9](https://github.com/ADITYAMAHAKALI/Avadhana/issues/9))
-7. [ ] Problem schema + creation flow ([#11](https://github.com/ADITYAMAHAKALI/Avadhana/issues/11)) — backend done (tier set once at creation, no reclassification yet); no frontend creation screen yet
-8. [ ] Problem search & discovery ([#13](https://github.com/ADITYAMAHAKALI/Avadhana/issues/13)) — backend filters done, Discover page UI not wired to them yet
-9. [ ] Feed core: post / comment / like ([#29](https://github.com/ADITYAMAHAKALI/Avadhana/issues/29)) — backend done and verified live; frontend is read-only, no compose/like/comment UI yet
+7. [x] Problem schema + creation flow ([#11](https://github.com/ADITYAMAHAKALI/Avadhana/issues/11)) — `/problems/new` screen (tier picker surfaces the new Tier Classification Rubric), entry points from Sidebar and Discover
+8. [x] Problem search & discovery ([#13](https://github.com/ADITYAMAHAKALI/Avadhana/issues/13)) — Discover page's search bar and filter chips are real, debounced, wired to `GET /problems` query params
+9. [x] Feed core: post / comment / like ([#29](https://github.com/ADITYAMAHAKALI/Avadhana/issues/29)) — post composer, working like toggle, and lazily-loaded comment threads, all gated to committed members; also fixed two pre-existing bugs found along the way (gate notice rendering unconditionally, `lock` falling back to an arbitrary other commitment)
 10. [x] Share, open/non-gated ([#30](https://github.com/ADITYAMAHAKALI/Avadhana/issues/30))
 11. [x] Wire the web frontend off mock data onto the endpoints above (routes already scaffolded: Login, Signup, Dashboard, Discover, Problem, Profile) — real ports live behind `VITE_API_BASE_URL`, mock stays default for zero-setup `npm run dev`
 12. [x] Reputation score computation ([#37](https://github.com/ADITYAMAHAKALI/Avadhana/issues/37)), tied to checkpoint events
@@ -60,7 +60,7 @@ User, focus slots, commitments, 90-day lock.
 - [x] [Design User schema](https://github.com/ADITYAMAHAKALI/Avadhana/issues/4) — SQLAlchemy model + JWT auth (signup/login), bcrypt password hashing
 - [x] [Implement FocusSlot model + 3-slot enforcement](https://github.com/ADITYAMAHAKALI/Avadhana/issues/5) — computed from active-commitment count (not a separate table); verified live: 4th commitment hard-blocked with 409 SLOT_LIMIT_EXCEEDED
 - [x] [Implement Commitment creation flow](https://github.com/ADITYAMAHAKALI/Avadhana/issues/6) — `POST /problems/{id}/commitments`, wired end-to-end through CommitModal in the web frontend
-- [ ] [Implement 90-day checkpoint job + UI flow](https://github.com/ADITYAMAHAKALI/Avadhana/issues/7) — backend done (`POST /commitments/{id}/checkpoint`: resolve/abandon/continue, lock enforced with no bypass, verified at day-89/90/91 boundaries); no frontend screen yet, and "job" is computed-on-read rather than a scheduled sweep (no notification system exists to page a scheduled job into) — remaining: a checkpoint UI screen
+- [x] [Implement 90-day checkpoint job + UI flow](https://github.com/ADITYAMAHAKALI/Avadhana/issues/7) — backend (`POST /commitments/{id}/checkpoint`: resolve/abandon/continue, lock enforced with no bypass, verified at day-89/90/91 boundaries) and frontend (`CheckpointModal`) both done; "job" stays computed-on-read rather than a scheduled sweep (no notification system exists to page a scheduled job into) — that's a deliberate scope call, not a gap
 - [x] [Implement commitment-gated authorization middleware](https://github.com/ADITYAMAHAKALI/Avadhana/issues/8) — reusable `require_committed_member` FastAPI dependency; verified live: non-member POST blocked with 403 NOT_COMMITTED, committed member succeeds
 - [x] [CommitmentCheckpoint audit log](https://github.com/ADITYAMAHAKALI/Avadhana/issues/9) — insert-only, every transition logged, `GET /commitments/{id}/checkpoints`
 
@@ -68,9 +68,9 @@ User, focus slots, commitments, 90-day lock.
 
 Problems, tiers, search, split/merge.
 
-- [ ] [Problem schema + creation flow](https://github.com/ADITYAMAHAKALI/Avadhana/issues/11) — SLC v1 — backend done (`POST /problems`, minimal schema, no hierarchy yet — `parentProblemTitle` hardcoded null) and verified live; **frontend has no problem-creation screen at all yet** — this was previously marked done in error, corrected 2026-07-09
-- [ ] [Tier classification rubric (S–D)](https://github.com/ADITYAMAHAKALI/Avadhana/issues/12) — SLC v1 (needed to set tier at creation) — the tier field itself works (accepts S/A/B/C/D at creation), but no concrete rubric doc (hour/funding thresholds per tier) exists yet, so classification is still subjective per-user judgment — see CLAUDE.md "Known Unknowns" #4
-- [ ] [Problem search & discovery](https://github.com/ADITYAMAHAKALI/Avadhana/issues/13) — SLC v1 — backend done (`GET /problems` with `q`/`tier`/`location`/`category` filters); DiscoverPage's filter UI is still presentational-only, not wired to the real query params yet
+- [x] [Problem schema + creation flow](https://github.com/ADITYAMAHAKALI/Avadhana/issues/11) — SLC v1 — backend (`POST /problems`, minimal schema, no hierarchy yet — `parentProblemTitle` hardcoded null) and frontend (`/problems/new`, entry points from Sidebar and Discover) both done and wired end-to-end
+- [x] [Tier classification rubric (S–D)](https://github.com/ADITYAMAHAKALI/Avadhana/issues/12) — SLC v1 — concrete hours/funding ranges per tier added to CLAUDE.md "Tier Classification Rubric", surfaced as helper text/tooltip in the problem-creation tier picker; addresses "Known Unknowns" #4
+- [x] [Problem search & discovery](https://github.com/ADITYAMAHAKALI/Avadhana/issues/13) — SLC v1 — DiscoverPage's search bar and filter chips are real, debounced (250ms), wired to `GET /problems?q=&tier=&location=&category=` end-to-end
 - [ ] [Tier reclassification governance flow](https://github.com/ADITYAMAHAKALI/Avadhana/issues/14) — post-v1
 - [ ] [Problem split mechanic](https://github.com/ADITYAMAHAKALI/Avadhana/issues/15) — post-v1
 - [ ] [Problem merge mechanic + conflict detection](https://github.com/ADITYAMAHAKALI/Avadhana/issues/16) — post-v1
@@ -92,7 +92,7 @@ Summarization, checklist generation, off-topic detection, moderation. Deferred u
 
 ## [Problem-Specific Feed & Interactions](https://github.com/ADITYAMAHAKALI/Avadhana/issues/28)
 
-- [ ] [Feed core: post / comment / like](https://github.com/ADITYAMAHAKALI/Avadhana/issues/29) — SLC v1 — backend done and verified live for all three (post/comment/like, gated to committed members); **frontend is read-only** — `ProblemPage` only wires `getFeed`, there's no post composer, no working like button, and no comment UI (no `Comment` type exists in the mockup) — corrected 2026-07-09, previously overclaimed
+- [x] [Feed core: post / comment / like](https://github.com/ADITYAMAHAKALI/Avadhana/issues/29) — SLC v1 — post composer, working like toggle, and lazily-loaded comment threads, all gated to committed members and verified live end-to-end
 - [x] [Share (open, non-gated)](https://github.com/ADITYAMAHAKALI/Avadhana/issues/30) — SLC v1 — no dedicated endpoint needed; all problem/feed GETs are public/unauthenticated by design, verified live
 - [ ] [Polls](https://github.com/ADITYAMAHAKALI/Avadhana/issues/31) — post-v1
 - [ ] [Task board: create / pick up / handover tasks](https://github.com/ADITYAMAHAKALI/Avadhana/issues/32) — post-v1
@@ -112,7 +112,7 @@ Rewards follow-through, not activity — do not build a second engagement-farmin
 - [x] [API key & secrets management policy](https://github.com/ADITYAMAHAKALI/Avadhana/issues/56) — SLC v1 — `docs/security-policy.md`
 - [x] [Immutable audit logging for moderation actions](https://github.com/ADITYAMAHAKALI/Avadhana/issues/57) — SLC v1 — established as the pattern via `CommitmentCheckpoint` (insert-only, never updated/deleted); no moderation actions exist yet to log (AI moderation is post-v1), so this is the principle + a working example, not moderation-specific logging itself
 - [ ] [Appeal fraud throttling](https://github.com/ADITYAMAHAKALI/Avadhana/issues/58) — post-v1 (no appeals to throttle until AI moderation is live)
-- [ ] [Human override for moderators](https://github.com/ADITYAMAHAKALI/Avadhana/issues/59) — SLC v1 (baseline override capability, ahead of full AI moderation) — not yet built, no moderation exists to override
+- [x] [Human override for moderators](https://github.com/ADITYAMAHAKALI/Avadhana/issues/59) — SLC v1 — `is_platform_admin` on User (no self-service API path to set it, deliberate — manual DB update only), admin-only hide/restore endpoints for posts and comments, immutable `ModerationOverrideEvent` audit log, per-problem moderation-log endpoint (admin-only for this baseline pass; widening to committed members is a natural follow-up); verified live end-to-end
 
 ## [Web Frontend (React)](https://github.com/ADITYAMAHAKALI/Avadhana/issues/60)
 
@@ -140,20 +140,20 @@ B2B/B2G RFP-to-Solution matching marketplace (multi-attribute + multi-embedding 
 
 Not yet tracked as individual GitHub issues — derived from CLAUDE.md's Security & Solo-Dev Architecture section plus standard web-app hardening. File issues under epic `#55` if adopted.
 
-- [ ] Secrets never committed; `.env` + `.gitignore` locally, k8s Secrets in the local cluster, a real secrets manager before VPS prod
-- [ ] Password hashing with bcrypt/argon2 — never plaintext, never reversible encryption
-- [ ] Session/JWT tokens signed, short-lived, and rotated on privilege change (e.g. new commitment created)
-- [ ] Rate limiting on auth endpoints (login, signup, password reset) to prevent brute force
-- [ ] Rate limiting on the API generally, especially anything that can trigger a downstream SARVAM call
-- [ ] SQL injection protection — parameterized queries / ORM only, no raw string interpolation
-- [ ] CORS configured to allow only the deployed web frontend origin
-- [ ] TLS/HTTPS terminated at ingress (local) and at the VPS reverse proxy (deployed)
-- [ ] CSRF protection if any cookie-based session auth is used
+- [x] Secrets never committed; `.env` + `.gitignore` locally, k8s Secrets in the local cluster, a real secrets manager before VPS prod
+- [x] Password hashing with bcrypt/argon2 — never plaintext, never reversible encryption — bcrypt via passlib
+- [ ] Session/JWT tokens signed, short-lived, and rotated on privilege change (e.g. new commitment created) — signed (HS256) and expire after 7 days; no rotation-on-privilege-change yet
+- [x] Rate limiting on auth endpoints (login, signup, password reset) to prevent brute force — 5/minute (slowapi, in-memory), verified live (4 requests through, 5th+ gets 429)
+- [x] Rate limiting on the API generally, especially anything that can trigger a downstream SARVAM call — 60/minute general default
+- [x] SQL injection protection — parameterized queries / ORM only, no raw string interpolation — SQLAlchemy ORM throughout, no raw SQL anywhere in the codebase
+- [x] CORS configured to allow only the deployed web frontend origin — `CORS_ALLOWED_ORIGIN` env var, fails safe to the Vite dev origin (never `*`) when unset, verified live
+- [ ] TLS/HTTPS terminated at ingress (local) and at the VPS reverse proxy (deployed) — optional Caddy service scaffolded in `docker-compose.prod.yml` but not enabled by default (no real domain yet)
+- [ ] CSRF protection if any cookie-based session auth is used — N/A as things stand: auth is JWT bearer only, no cookie-based session exists; revisit if that changes
 - [ ] Dependency vulnerability scanning (Dependabot / `pip-audit` / `npm audit`) wired into CI
-- [ ] API key rotation policy documented and followed for SARVAM keys
-- [ ] AI API calls logged for cost/audit without logging full user-data payloads (per CLAUDE.md)
-- [ ] All moderation actions (auto-block, appeal, appeal outcome) immutable — insert-only, never update/delete
-- [ ] Human override path for moderators exists and is exercised at least once before public launch
+- [ ] API key rotation policy documented and followed for SARVAM keys — cadence documented in `docs/security-policy.md`; "followed" isn't something a checklist item can verify, needs an actual rotation to happen
+- [ ] AI API calls logged for cost/audit without logging full user-data payloads (per CLAUDE.md) — no AI calls happen yet in the SLC v1 path (AI coordination is post-v1)
+- [x] All moderation actions (auto-block, appeal, appeal outcome) immutable — insert-only, never update/delete — `ModerationOverrideEvent` follows this exactly; no auto-block/appeal exists yet (post-v1), so this covers the human-override path only so far
+- [x] Human override path for moderators exists and is exercised at least once before public launch — admin hide/restore for posts and comments, verified live end-to-end (hide excludes from feed, audit log records it, restore brings it back)
 
 ## Testing Checklist (pre-launch)
 
