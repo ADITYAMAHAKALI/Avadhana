@@ -2,9 +2,9 @@
 
 Mirrors the GitHub issue backlog (`ADITYAMAHAKALI/Avadhana`, epics `#3` `#10` `#18` `#28` `#35` `#39` `#55` `#60`) so progress can be tracked here or on GitHub. Check items off in either place — GitHub is the source of truth for status; this file is for a quick local read.
 
-**Immediate focus**: get every service running locally on Kubernetes via Podman before any cloud/VPS work. Start with the Local Kubernetes Dev Environment section below.
+**Local Kubernetes Dev Environment is done** — every service runs locally on Podman/kind via `make dev-up` (see `docs/local-dev.md`). **Immediate focus now**: Core Commitment System (`#3`) — it's the foundational mechanic (slots, commitments, 90-day lock) that Problem Management, the Feed, and Web Frontend's real data wiring all depend on. The Web Frontend epic (`#60`) has the app shell built against mock data (issue `#61`); it stays mock-backed until `#3`/`#10` land real endpoints.
 
-## [Local Kubernetes Dev Environment (Podman)](https://github.com/ADITYAMAHAKALI/Avadhana/issues/39) — start here
+## [Local Kubernetes Dev Environment (Podman)](https://github.com/ADITYAMAHAKALI/Avadhana/issues/39) — done
 
 - [x] [Install & configure Podman for local Kubernetes](https://github.com/ADITYAMAHAKALI/Avadhana/issues/40)
 - [x] [Set up local k8s cluster + kubectl context](https://github.com/ADITYAMAHAKALI/Avadhana/issues/41)
