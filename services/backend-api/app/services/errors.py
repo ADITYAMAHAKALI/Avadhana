@@ -85,3 +85,47 @@ class ModerationTargetNotFoundError(Exception):
         self.target_type = target_type
         self.target_id = target_id
         super().__init__(f"No {target_type} with id {target_id} on this problem.")
+
+
+# --- Marketplace (issues #63, #64, #65) ------------------------------------
+
+
+class OrganizationNotFoundError(Exception):
+    def __init__(self, organization_id: str):
+        self.organization_id = organization_id
+        super().__init__(f"Organization {organization_id} not found.")
+
+
+class NotOrgMemberError(Exception):
+    """Raised when a caller with no OrganizationMembership on the given
+    Organization attempts an action that requires membership (posting an
+    RFP, publishing a Solution)."""
+
+    def __init__(self, organization_id: str):
+        self.organization_id = organization_id
+        super().__init__(
+            f"Caller is not a member of organization {organization_id}."
+        )
+
+
+class NotOrgAdminError(Exception):
+    """Raised when a caller with a non-admin (or no) membership attempts
+    an admin-only action (adding a new member)."""
+
+    def __init__(self, organization_id: str):
+        self.organization_id = organization_id
+        super().__init__(
+            f"Caller is not an admin of organization {organization_id}."
+        )
+
+
+class RFPNotFoundError(Exception):
+    def __init__(self, rfp_id: str):
+        self.rfp_id = rfp_id
+        super().__init__(f"RFP {rfp_id} not found.")
+
+
+class SolutionNotFoundError(Exception):
+    def __init__(self, solution_id: str):
+        self.solution_id = solution_id
+        super().__init__(f"Solution {solution_id} not found.")

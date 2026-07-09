@@ -30,6 +30,9 @@ from app.impl.service_info import SERVICE_NAME, SERVICE_VERSION, StaticServiceIn
 from app.interfaces.health import HealthCheckPort
 from app.interfaces.service_info import ServiceInfoPort
 from app.routers import auth, commitments, feed, moderation, problems, users
+from app.routers.marketplace import organizations as marketplace_organizations
+from app.routers.marketplace import rfps as marketplace_rfps
+from app.routers.marketplace import solutions as marketplace_solutions
 
 app = FastAPI(title=SERVICE_NAME, version=SERVICE_VERSION)
 
@@ -57,6 +60,14 @@ app.include_router(problems.router)
 app.include_router(commitments.router)
 app.include_router(feed.router)
 app.include_router(moderation.router)
+# Marketplace (B2B/B2G RFP <-> Solution matching) — architecturally
+# independent of the civic commitment mechanic, see CLAUDE.md "Solution
+# Marketplace Architecture". Routers live under app/routers/marketplace/
+# (not the flat app/routers/*.py layout) so this surface can be
+# extracted into its own service later without a rework.
+app.include_router(marketplace_organizations.router)
+app.include_router(marketplace_rfps.router)
+app.include_router(marketplace_solutions.router)
 
 
 # --- Providers (composition root wiring) ------------------------------

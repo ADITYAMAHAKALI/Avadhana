@@ -18,6 +18,9 @@ from sqlalchemy.orm import Session
 from app.models.checkpoint import CheckpointEventType, CommitmentCheckpoint
 from app.models.commitment import Commitment, CommitmentStatus
 from app.models.feed import Comment, FeedPost, PostLike
+from app.models.marketplace.organization import Organization, OrganizationMembership
+from app.models.marketplace.rfp import RFP, RFPRequirement
+from app.models.marketplace.solution import Solution, SolutionAttribute
 from app.models.moderation import ModerationOverrideEvent, ModerationTargetType
 from app.models.problem import Problem
 from app.models.user import User
@@ -299,5 +302,151 @@ class SqlAlchemyModerationRepo:
             select(ModerationOverrideEvent)
             .where(or_(*conditions))
             .order_by(ModerationOverrideEvent.occurred_at.desc())
+        )
+        return list(self.session.execute(stmt).scalars().all())
+
+
+class SqlAlchemyOrganizationRepo:
+    def __init__(self, session: Session):
+        self.session = session
+
+    def get_by_id(self, organization_id: str) -> Organization | None:
+        return self.session.get(Organization, organization_id)
+
+    def add(self, organization: Organization) -> Organization:
+        self.session.add(organization)
+        self.session.commit()
+        self.session.refresh(organization)
+        return organization
+
+    def add_membership(self, membership: OrganizationMembership) -> OrganizationMembership:
+        self.session.add(membership)
+        self.session.commit()
+        self.session.refresh(membership)
+        return membership
+
+    def get_membership(
+        self, organization_id: str, user_id: str
+    ) -> OrganizationMembership | None:
+        stmt = select(OrganizationMembership).where(
+            OrganizationMembership.organization_id == organization_id,
+            OrganizationMembership.user_id == user_id,
+        )
+        return self.session.execute(stmt).scalar_one_or_none()
+
+    def list_memberships_for_organization(
+        self, organization_id: str
+    ) -> list[OrganizationMembership]:
+        stmt = (
+            select(OrganizationMembership)
+            .where(OrganizationMembership.organization_id == organization_id)
+            .order_by(OrganizationMembership.created_at.asc())
+        )
+        return list(self.session.execute(stmt).scalars().all())
+
+    def list_organizations_for_user(self, user_id: str) -> list[Organization]:
+        stmt = (
+            select(Organization)
+            .join(
+                OrganizationMembership,
+                OrganizationMembership.organization_id == Organization.id,
+            )
+            .where(OrganizationMembership.user_id == user_id)
+            .order_by(Organization.created_at.desc())
+        )
+        return list(self.session.execute(stmt).scalars().all())
+
+
+class SqlAlchemyRFPRepo:
+    def __init__(self, session: Session):
+        self.session = session
+
+    def get_by_id(self, rfp_id: str) -> RFP | None:
+        return self.session.get(RFP, rfp_id)
+
+    def add(self, rfp: RFP) -> RFP:
+        self.session.add(rfp)
+        self.session.commit()
+        self.session.refresh(rfp)
+        return rfp
+
+    def search(
+        self,
+        *,
+        industry: str | None = None,
+        geography: str | None = None,
+        resolution_mode: str | None = None,
+        visibility: str | None = None,
+    ) -> list[RFP]:
+        stmt = select(RFP)
+        if industry:
+            stmt = stmt.where(RFP.industry.ilike(f"%{industry}%"))
+        if geography:
+            stmt = stmt.where(RFP.geography.ilike(f"%{geography}%"))
+        if resolution_mode:
+            stmt = stmt.where(RFP.resolution_mode == resolution_mode)
+        if visibility:
+            stmt = stmt.where(RFP.visibility == visibility)
+        stmt = stmt.order_by(RFP.created_at.desc())
+        return list(self.session.execute(stmt).scalars().all())
+
+    def add_requirement(self, requirement: RFPRequirement) -> RFPRequirement:
+        self.session.add(requirement)
+        self.session.commit()
+        self.session.refresh(requirement)
+        return requirement
+
+    def list_requirements(self, rfp_id: str) -> list[RFPRequirement]:
+        stmt = (
+            select(RFPRequirement)
+            .where(RFPRequirement.rfp_id == rfp_id)
+            .order_by(RFPRequirement.created_at.asc())
+        )
+        return list(self.session.execute(stmt).scalars().all())
+
+
+class SqlAlchemySolutionRepo:
+    def __init__(self, session: Session):
+        self.session = session
+
+    def get_by_id(self, solution_id: str) -> Solution | None:
+        return self.session.get(Solution, solution_id)
+
+    def add(self, solution: Solution) -> Solution:
+        self.session.add(solution)
+        self.session.commit()
+        self.session.refresh(solution)
+        return solution
+
+    def search(
+        self,
+        *,
+        category_tag: str | None = None,
+        organization_id: str | None = None,
+    ) -> list[Solution]:
+        stmt = select(Solution)
+        if organization_id:
+            stmt = stmt.where(Solution.organization_id == organization_id)
+        stmt = stmt.order_by(Solution.created_at.desc())
+        solutions = list(self.session.execute(stmt).scalars().all())
+        if category_tag:
+            # category_tags is a JSON list column — filtering by
+            # membership is done in Python rather than a DB-specific JSON
+            # operator, since this must work identically against both
+            # SQLite (integration tests) and Postgres (dev/prod).
+            solutions = [s for s in solutions if category_tag in (s.category_tags or [])]
+        return solutions
+
+    def add_attribute(self, attribute: SolutionAttribute) -> SolutionAttribute:
+        self.session.add(attribute)
+        self.session.commit()
+        self.session.refresh(attribute)
+        return attribute
+
+    def list_attributes(self, solution_id: str) -> list[SolutionAttribute]:
+        stmt = (
+            select(SolutionAttribute)
+            .where(SolutionAttribute.solution_id == solution_id)
+            .order_by(SolutionAttribute.created_at.asc())
         )
         return list(self.session.execute(stmt).scalars().all())
