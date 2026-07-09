@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { ActorSpecialization, Problem, Role } from '../../types/domain';
 import { commitmentsApi } from '../../data/real/commitmentsApi';
 import { notifyFocusSlotsChanged } from '../../data/focusSlotsRefresh';
+import { rememberCommitmentId } from '../../data/commitmentIdCache';
 import { ApiError } from '../../data/real/httpClient';
 import styles from './CommitModal.module.css';
 
@@ -39,10 +40,15 @@ export function CommitModal({ problem, onClose, onCommitted }: CommitModalProps)
     setIsCommitting(true);
     setCommitError(null);
     try {
-      await commitmentsApi.create(problem.id, {
+      const commitment = await commitmentsApi.create(problem.id, {
         role,
         specialization: role === 'actor' ? specialization : null,
       });
+      // Stash commitment.id so the 90-day checkpoint flow (CheckpointModal)
+      // can look it up by problem id later — the committed-problems list
+      // endpoint only returns problem ids, not commitment ids. See
+      // data/commitmentIdCache.ts for why this is needed.
+      rememberCommitmentId(problem.id, commitment.id);
       notifyFocusSlotsChanged();
       onCommitted?.();
       onClose();

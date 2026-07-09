@@ -32,11 +32,16 @@ export const commitmentsApi = {
   },
 
   /**
-   * Not wired to any UI yet — no checkpoint-flow screen exists in the
-   * current mockup (per the task's scope boundaries). Included so the
-   * endpoint is ready for that screen later.
+   * Wired to CheckpointModal (services/web/src/components/CheckpointModal).
+   * On success (200) the backend returns the updated Commitment; before the
+   * 90-day lock expires it instead responds 409
+   * `{error: "LOCK_ACTIVE", message, daysRemaining}` — callers should catch
+   * ApiError and read `.body` for `daysRemaining` in that case.
    */
-  async checkpoint(commitmentId: string, action: CheckpointAction, note: string): Promise<void> {
-    await apiFetch<void>(`/commitments/${commitmentId}/checkpoint`, { method: 'POST', body: { action, note } });
+  async checkpoint(commitmentId: string, action: CheckpointAction, note: string | null): Promise<Commitment> {
+    return apiFetch<Commitment>(`/commitments/${commitmentId}/checkpoint`, {
+      method: 'POST',
+      body: { action, note },
+    });
   },
 };

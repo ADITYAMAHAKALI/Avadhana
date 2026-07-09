@@ -90,6 +90,17 @@ export interface FeedPost {
   poll?: Poll;
 }
 
+export interface Comment {
+  id: string;
+  postId: string;
+  authorInitials: string;
+  authorName: string;
+  authorColor: string;
+  roleLabel: string;
+  timeAgo: string;
+  body: string;
+}
+
 export interface ModerationQueueItem {
   id: string;
   status: 'flagged' | 'auto-blocked';
