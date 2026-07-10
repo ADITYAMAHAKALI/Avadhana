@@ -15,6 +15,7 @@ same footgun warning as the top-level `app/models/__init__.py` docstring.
 """
 
 from app.models.marketplace.billing import BillingEvent
+from app.models.marketplace.embedding import EmbeddingVector
 from app.models.marketplace.organization import Organization, OrganizationMembership
 from app.models.marketplace.rfp import RFP, RFPRequirement
 from app.models.marketplace.solution import Solution, SolutionAttribute
@@ -27,4 +28,5 @@ __all__ = [
     "Solution",
     "SolutionAttribute",
     "BillingEvent",
+    "EmbeddingVector",
 ]

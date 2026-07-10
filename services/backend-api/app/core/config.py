@@ -84,5 +84,38 @@ class Settings:
             return ["http://localhost:5173"]
         return [origin.strip() for origin in raw.split(",") if origin.strip()]
 
+    # --- Marketplace embeddings provider (issue #67) ---
+    # Mirrors the SARVAM_USE_MOCK / SARVAM_API_KEY pattern in
+    # `services/ai-coordinator-worker/sarvam_config.py` exactly, applied
+    # to this service's second, independent embeddings provider (CLAUDE.md
+    # "Embeddings provider" — SARVAM has no embeddings endpoint, so the
+    # Marketplace matching engine needs a different provider entirely; see
+    # app/impl/embeddings_client.py's module docstring for why OpenAI was
+    # picked). Defaults to the mock so `EMBEDDINGS_API_KEY` is never
+    # required for local dev/CI, same "no live credentials or cost" rule
+    # CLAUDE.md states for SARVAM.
+
+    @property
+    def embeddings_use_mock(self) -> bool:
+        return os.environ.get("EMBEDDINGS_USE_MOCK", "true").strip().lower() == "true"
+
+    @property
+    def embeddings_api_key(self) -> str:
+        # No RuntimeError-on-missing here (unlike jwt_secret/database_url):
+        # this is only read when embeddings_use_mock is False, and the
+        # provider-selection function in app/services/embeddings_provider.py
+        # is the one place that decides whether a missing key is fatal —
+        # keeping that decision out of Settings mirrors resolve_sarvam_config
+        # raising ValueError itself rather than a Settings property doing it.
+        return os.environ.get("EMBEDDINGS_API_KEY", "")
+
+    @property
+    def embeddings_api_base_url(self) -> str:
+        return os.environ.get("EMBEDDINGS_API_BASE_URL", "https://api.openai.com")
+
+    @property
+    def embeddings_model(self) -> str:
+        return os.environ.get("EMBEDDINGS_MODEL", "text-embedding-3-small")
+
 
 settings = Settings()

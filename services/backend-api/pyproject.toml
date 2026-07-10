@@ -23,6 +23,16 @@ dependencies = [
     # Redis-backed limiter (slowapi supports this via the `limits`
     # storage backends) so limits are shared across replicas.
     "slowapi>=0.1.9,<1.0",
+    # SQLAlchemy `Vector` column type for the Solution Marketplace's
+    # EmbeddingVector storage (CLAUDE.md "Embeddings provider": "Store
+    # vectors in Postgres via the pgvector extension"). Only used when
+    # the bound engine's dialect is postgresql — see
+    # app/models/marketplace/embedding.py's PortableVector, which falls
+    # back to plain JSON on SQLite (this repo's integration-test
+    # dialect) since pgvector's type has no SQLite equivalent. Pure
+    # Python, no compiled/native dependency, so this is a lightweight
+    # addition either way.
+    "pgvector>=0.3,<1.0",
 ]
 
 [project.optional-dependencies]
