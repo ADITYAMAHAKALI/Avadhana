@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { currentUserPort, problemsPort } from '../data';
 import type { Comment, CommittedProblemSummary, FeedPost, Problem, TaskItem } from '../types/domain';
 import { Button } from '../components/shared/Button';
@@ -203,6 +203,12 @@ export function ProblemPage() {
             </div>
           </div>
           <div className={styles.headerActions}>
+            <Link to={`/graph/${problem.id}`}>
+              <Button variant="secondary">Graph</Button>
+            </Link>
+            <Link to={`/coordinator/${problem.id}`}>
+              <Button variant="secondary">Coordinator</Button>
+            </Link>
             <Button variant="secondary">↗ Share</Button>
             <Button variant="primary" onClick={() => setShowCommit(true)}>
               Commit a slot
@@ -462,14 +468,14 @@ export function ProblemPage() {
             </div>
           </div>
 
-          <button type="button" className={styles.invokeButton}>
+          <Link to={`/coordinator/${problem.id}`} className={styles.invokeButton}>
             ✦ Invoke coordinator
-          </button>
+          </Link>
         </div>
       </div>
 
       {showCommit && (
-        <Modal onClose={() => setShowCommit(false)}>
+        <Modal onClose={() => setShowCommit(false)} titleId="commit-modal-title">
           <CommitModal problem={problem} onClose={() => setShowCommit(false)} onCommitted={load} />
         </Modal>
       )}

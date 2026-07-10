@@ -174,7 +174,7 @@ export function DashboardPage() {
       )}
 
       {checkpointProblem && (
-        <Modal onClose={() => setCheckpointProblem(null)}>
+        <Modal onClose={() => setCheckpointProblem(null)} titleId="checkpoint-modal-title">
           <CheckpointModal
             problem={checkpointProblem}
             onClose={() => setCheckpointProblem(null)}

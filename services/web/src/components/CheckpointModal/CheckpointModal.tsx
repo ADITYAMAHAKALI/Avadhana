@@ -100,7 +100,9 @@ export function CheckpointModal({ problem, onClose, onCheckpointed }: Checkpoint
     <>
       <div className={styles.header}>
         <div className={styles.eyebrow}>90-DAY CHECKPOINT</div>
-        <div className={styles.headerTitle}>{problem.title}</div>
+        <div className={styles.headerTitle} id="checkpoint-modal-title">
+          {problem.title}
+        </div>
         <div className={styles.headerBody}>
           You&apos;ve reached the minimum commitment period. Choose how you want to proceed — this is recorded on
           your profile either way.
@@ -112,12 +114,18 @@ export function CheckpointModal({ problem, onClose, onCheckpointed }: Checkpoint
           <div className={styles.stepLabel}>Step 1 · Choose an outcome</div>
           <div className={styles.actionList}>
             {ACTIONS.map((opt) => (
-              <div key={opt.key} className={actionCardClass(opt.key)} onClick={() => setAction(opt.key)}>
+              <button
+                key={opt.key}
+                type="button"
+                className={actionCardClass(opt.key)}
+                aria-pressed={action === opt.key}
+                onClick={() => setAction(opt.key)}
+              >
                 <div className={styles.actionCardHead}>
                   <span className={styles.actionName}>{opt.label}</span>
                 </div>
                 <div className={styles.actionDesc}>{opt.description}</div>
-              </div>
+              </button>
             ))}
           </div>
 
