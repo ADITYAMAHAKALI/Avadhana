@@ -21,6 +21,7 @@ const NAV_ITEMS = [
   { to: '/graph/p-groundwater', label: 'Problem graph' },
   { to: '/profile', label: 'Your record' },
   { to: '/coordinator/p-groundwater', label: 'Coordinator & moderation' },
+  { to: '/marketplace', label: 'Marketplace' },
 ];
 
 export function Sidebar() {

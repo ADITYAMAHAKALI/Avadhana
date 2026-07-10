@@ -2,14 +2,19 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { AppShell } from './components/layout/AppShell';
 import { useAuth } from './context/AuthContext';
+import { OrganizationProvider } from './context/OrganizationContext';
 import { CoordinatorPage } from './routes/CoordinatorPage';
 import { DashboardPage } from './routes/DashboardPage';
 import { DiscoverPage } from './routes/DiscoverPage';
 import { GraphPage } from './routes/GraphPage';
 import { LoginPage } from './routes/LoginPage';
+import { MarketplacePage } from './routes/MarketplacePage';
 import { NewProblemPage } from './routes/NewProblemPage';
+import { NewRFPPage } from './routes/NewRFPPage';
+import { NewSolutionPage } from './routes/NewSolutionPage';
 import { ProblemPage } from './routes/ProblemPage';
 import { ProfilePage } from './routes/ProfilePage';
+import { RFPDetailPage } from './routes/RFPDetailPage';
 import { SignupPage } from './routes/SignupPage';
 
 function RequireAuth({ children }: { children: ReactNode }) {
@@ -29,18 +34,24 @@ export default function App() {
         path="/*"
         element={
           <RequireAuth>
-            <AppShell>
-              <Routes>
-                <Route path="/dashboard" element={<DashboardPage />} />
-                <Route path="/discover" element={<DiscoverPage />} />
-                <Route path="/problems/new" element={<NewProblemPage />} />
-                <Route path="/problems/:problemId" element={<ProblemPage />} />
-                <Route path="/graph/:problemId" element={<GraphPage />} />
-                <Route path="/profile" element={<ProfilePage />} />
-                <Route path="/coordinator/:problemId" element={<CoordinatorPage />} />
-                <Route path="*" element={<Navigate to="/dashboard" replace />} />
-              </Routes>
-            </AppShell>
+            <OrganizationProvider>
+              <AppShell>
+                <Routes>
+                  <Route path="/dashboard" element={<DashboardPage />} />
+                  <Route path="/discover" element={<DiscoverPage />} />
+                  <Route path="/problems/new" element={<NewProblemPage />} />
+                  <Route path="/problems/:problemId" element={<ProblemPage />} />
+                  <Route path="/graph/:problemId" element={<GraphPage />} />
+                  <Route path="/profile" element={<ProfilePage />} />
+                  <Route path="/coordinator/:problemId" element={<CoordinatorPage />} />
+                  <Route path="/marketplace" element={<MarketplacePage />} />
+                  <Route path="/marketplace/rfps/new" element={<NewRFPPage />} />
+                  <Route path="/marketplace/rfps/:rfpId" element={<RFPDetailPage />} />
+                  <Route path="/marketplace/solutions/new" element={<NewSolutionPage />} />
+                  <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                </Routes>
+              </AppShell>
+            </OrganizationProvider>
           </RequireAuth>
         }
       />

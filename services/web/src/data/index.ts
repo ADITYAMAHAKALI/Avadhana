@@ -1,8 +1,16 @@
 import { MockCurrentUserPort } from './mock/MockCurrentUserPort';
+import { MockMatchingPort } from './mock/MockMatchingPort';
 import { MockModerationPort } from './mock/MockModerationPort';
+import { MockOrganizationsPort } from './mock/MockOrganizationsPort';
 import { MockProblemsPort } from './mock/MockProblemsPort';
+import { MockRFPsPort } from './mock/MockRFPsPort';
+import { MockSolutionsPort } from './mock/MockSolutionsPort';
 import { RealCurrentUserPort } from './real/RealCurrentUserPort';
+import { RealMatchingPort } from './real/RealMatchingPort';
+import { RealOrganizationsPort } from './real/RealOrganizationsPort';
 import { RealProblemsPort } from './real/RealProblemsPort';
+import { RealRFPsPort } from './real/RealRFPsPort';
+import { RealSolutionsPort } from './real/RealSolutionsPort';
 
 /**
  * Composition root. Every screen imports its data from here, never
@@ -30,6 +38,17 @@ const useReal = hasApiBaseUrl && !forceMock;
 export const currentUserPort = useReal ? new RealCurrentUserPort() : new MockCurrentUserPort();
 export const problemsPort = useReal ? new RealProblemsPort() : new MockProblemsPort();
 export const moderationPort = new MockModerationPort();
+
+/**
+ * Solution Marketplace ports (issues #72/#69) — split by resource
+ * (Organizations/RFPs/Solutions/Matching) rather than one big
+ * `marketplacePort`, mirroring how the rest of this file is already
+ * split by resource. Same real/mock toggle as everything else above.
+ */
+export const organizationsPort = useReal ? new RealOrganizationsPort() : new MockOrganizationsPort();
+export const rfpsPort = useReal ? new RealRFPsPort() : new MockRFPsPort();
+export const solutionsPort = useReal ? new RealSolutionsPort() : new MockSolutionsPort();
+export const matchingPort = useReal ? new RealMatchingPort() : new MockMatchingPort();
 
 /**
  * Exported so standalone write-action modules (e.g. the problem-creation
