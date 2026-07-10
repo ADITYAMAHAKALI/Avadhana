@@ -12,6 +12,7 @@ from app.models.marketplace.organization import Organization, OrganizationMember
 from app.models.marketplace.rfp import RFP, RFPRequirement
 from app.models.marketplace.solution import Solution, SolutionAttribute
 from app.schemas_marketplace import (
+    AttributeMatchOut,
     BillingEventOut,
     OrganizationMembershipOut,
     OrganizationOut,
@@ -20,6 +21,7 @@ from app.schemas_marketplace import (
     SolutionAttributeOut,
     SolutionOut,
 )
+from app.services.marketplace_matching import AttributeMatchResult
 
 
 def organization_to_out(organization: Organization) -> OrganizationOut:
@@ -105,4 +107,12 @@ def billing_event_to_out(event: BillingEvent) -> BillingEventOut:
         event_type=event.event_type,
         amount=event.amount,
         occurred_at=event.occurred_at,
+    )
+
+
+def attribute_match_to_out(result: AttributeMatchResult) -> AttributeMatchOut:
+    return AttributeMatchOut(
+        solution=solution_to_out(result.solution),
+        score=result.score,
+        matched_requirement_ids=result.matched_requirement_ids,
     )

@@ -30,6 +30,7 @@ from app.impl.service_info import SERVICE_NAME, SERVICE_VERSION, StaticServiceIn
 from app.interfaces.health import HealthCheckPort
 from app.interfaces.service_info import ServiceInfoPort
 from app.routers import auth, commitments, feed, moderation, problems, users
+from app.routers.marketplace import matching as marketplace_matching
 from app.routers.marketplace import organizations as marketplace_organizations
 from app.routers.marketplace import rfps as marketplace_rfps
 from app.routers.marketplace import solutions as marketplace_solutions
@@ -68,6 +69,11 @@ app.include_router(moderation.router)
 app.include_router(marketplace_organizations.router)
 app.include_router(marketplace_rfps.router)
 app.include_router(marketplace_solutions.router)
+# Same "/marketplace/rfps" prefix as marketplace_rfps — a distinct
+# router module per CLAUDE.md's matching-engine phasing (this is the
+# non-ML attribute-match slice, issue #66; embeddings/RRF land as
+# separate later routers), not a re-registration of the same routes.
+app.include_router(marketplace_matching.router)
 
 
 # --- Providers (composition root wiring) ------------------------------

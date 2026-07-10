@@ -171,7 +171,7 @@ Not yet tracked as individual GitHub issues — derived from CLAUDE.md's Testing
 - [x] CI runs unit + integration tests on every PR; container images and k8s manifests validate — `test-backend-api` and `test-ai-coordinator-worker` jobs added alongside `build-images`/`validate-manifests`/`validate-compose`
 - [ ] End-to-end test of the full SLC v1 loop: sign up → commit → post as committed member → hit checkpoint — exercised manually (curl/Node scripts) during this session's verification passes, but no automated E2E suite (e.g. Playwright against the deployed stack, per `docs/testing-strategy.md`'s recommendation) exists yet
 
-## Marketing & Launch
+    ## Marketing & Launch
 
 Not yet tracked as individual GitHub issues. The spec (Section 9, risk 5 — "Growth tension") is explicit that the friction is the pitch, not a bug to hide — messaging should lead with it, not apologize for it.
 

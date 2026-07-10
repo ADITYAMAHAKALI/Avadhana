@@ -439,10 +439,13 @@ class SqlAlchemySolutionRepo:
         *,
         category_tag: str | None = None,
         organization_id: str | None = None,
+        status: str | None = None,
     ) -> list[Solution]:
         stmt = select(Solution)
         if organization_id:
             stmt = stmt.where(Solution.organization_id == organization_id)
+        if status:
+            stmt = stmt.where(Solution.status == status)
         stmt = stmt.order_by(Solution.created_at.desc())
         solutions = list(self.session.execute(stmt).scalars().all())
         if category_tag:

@@ -35,7 +35,7 @@ from app.models.marketplace.organization import (
     OrganizationMembershipRole,
 )
 from app.models.marketplace.rfp import RFP, RFPRequirement
-from app.models.marketplace.solution import Solution, SolutionAttribute
+from app.models.marketplace.solution import Solution, SolutionAttribute, SolutionStatus
 from app.services.errors import (
     NotOrgAdminError,
     NotOrgMemberError,
@@ -43,6 +43,7 @@ from app.services.errors import (
     RFPNotFoundError,
     SolutionNotFoundError,
 )
+from app.services.marketplace_matching import AttributeMatchResult, rank_attribute_matches
 
 
 def create_organization(
@@ -227,6 +228,27 @@ def search_rfps(
     return visible
 
 
+def rfp_visible_to_caller(
+    *,
+    rfp: RFP,
+    caller_user_id: str | None,
+    org_repo: OrganizationRepoPort,
+) -> bool:
+    """Shared invite-only visibility gate: public RFPs are visible to
+    anyone; invite-only RFPs are visible only to members of the posting
+    Organization (build brief: "keep it simple: invite_only visible only
+    to org members"). Factored out of the near-identical inline checks
+    that were duplicated in `app/routers/marketplace/rfps.py`'s
+    get/list-requirements routes, and reused by the attribute-matching
+    endpoint (issue #66) so all three surfaces enforce the exact same
+    rule."""
+    if rfp.visibility != "invite_only":
+        return True
+    if caller_user_id is None:
+        return False
+    return org_repo.get_membership(rfp.organization_id, caller_user_id) is not None
+
+
 def create_solution(
     *,
     organization_id: str,
@@ -299,3 +321,46 @@ def add_solution_attribute(
         attribute_value=attribute_value,
     )
     return solution_repo.add_attribute(attribute)
+
+
+def get_attribute_matches_for_rfp(
+    *,
+    rfp_id: str,
+    caller_user_id: str | None,
+    org_repo: OrganizationRepoPort,
+    rfp_repo: RFPRepoPort,
+    solution_repo: SolutionRepoPort,
+) -> list[AttributeMatchResult]:
+    """Orchestrates GitHub issue #66's matching MVP: ranks every
+    published Solution against `rfp_id`'s requirements using
+    `app.services.marketplace_matching` (hard-constraint filter +
+    weighted attribute-overlap score, no ML, no embeddings — those are
+    issues #67/#68).
+
+    Gated by the same invite-only visibility rule as reading the RFP
+    itself (`rfp_visible_to_caller`) — a buyer's private RFP shouldn't
+    leak its match results to outsiders any more than the RFP's own
+    content should.
+
+    Only `Solution.status == "published"` candidates are considered.
+    NOTE: as of this pass there is no publish-toggle endpoint yet (every
+    Solution is created with `status="draft"` and stays there — see
+    `app/routers/marketplace/solutions.py`), so this will legitimately
+    return an empty list until a publish action exists. Filtering by
+    "published" now (rather than matching against drafts) is still the
+    right contract for this endpoint — it shouldn't need to change again
+    once publishing ships.
+    """
+    rfp = rfp_repo.get_by_id(rfp_id)
+    if rfp is None:
+        raise RFPNotFoundError(rfp_id)
+    if not rfp_visible_to_caller(rfp=rfp, caller_user_id=caller_user_id, org_repo=org_repo):
+        raise RFPNotFoundError(rfp_id)
+
+    requirements = rfp_repo.list_requirements(rfp_id)
+    published_solutions = solution_repo.search(status=SolutionStatus.PUBLISHED.value)
+    candidates = [
+        (solution, solution_repo.list_attributes(solution.id)) for solution in published_solutions
+    ]
+
+    return rank_attribute_matches(candidates, requirements)

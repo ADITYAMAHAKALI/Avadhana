@@ -32,7 +32,12 @@ from app.schemas_marketplace import (
     RFPRequirementOut,
 )
 from app.services.errors import NotOrgMemberError, OrganizationNotFoundError, RFPNotFoundError
-from app.services.marketplace_service import add_rfp_requirement, create_rfp, search_rfps
+from app.services.marketplace_service import (
+    add_rfp_requirement,
+    create_rfp,
+    rfp_visible_to_caller,
+    search_rfps,
+)
 from app.services.presenters_marketplace import rfp_requirement_to_out, rfp_to_out
 
 router = APIRouter(prefix="/marketplace/rfps", tags=["marketplace-rfps"])
@@ -130,16 +135,11 @@ def get_rfp_route(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"error": "RFP_NOT_FOUND", "message": f"No RFP with id {rfp_id}."},
         )
-    if rfp.visibility == "invite_only":
-        member = (
-            caller_user_id is not None
-            and org_repo.get_membership(rfp.organization_id, caller_user_id) is not None
+    if not rfp_visible_to_caller(rfp=rfp, caller_user_id=caller_user_id, org_repo=org_repo):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": "RFP_NOT_FOUND", "message": f"No RFP with id {rfp_id}."},
         )
-        if not member:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail={"error": "RFP_NOT_FOUND", "message": f"No RFP with id {rfp_id}."},
-            )
     return rfp_to_out(rfp)
 
 
@@ -195,15 +195,10 @@ def list_rfp_requirements_route(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"error": "RFP_NOT_FOUND", "message": f"No RFP with id {rfp_id}."},
         )
-    if rfp.visibility == "invite_only":
-        member = (
-            caller_user_id is not None
-            and org_repo.get_membership(rfp.organization_id, caller_user_id) is not None
+    if not rfp_visible_to_caller(rfp=rfp, caller_user_id=caller_user_id, org_repo=org_repo):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": "RFP_NOT_FOUND", "message": f"No RFP with id {rfp_id}."},
         )
-        if not member:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail={"error": "RFP_NOT_FOUND", "message": f"No RFP with id {rfp_id}."},
-            )
     requirements = rfp_repo.list_requirements(rfp_id)
     return [rfp_requirement_to_out(r) for r in requirements]
