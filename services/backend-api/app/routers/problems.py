@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.core.auth_dependencies import get_current_user
 from app.db.session import get_session
 from app.impl.repositories import SqlAlchemyCommitmentRepo, SqlAlchemyProblemRepo
+from app.interfaces.repositories import DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT
 from app.models.problem import Problem
 from app.models.user import User
 from app.schemas import ProblemCreateRequest, ProblemOut
@@ -47,15 +48,20 @@ def list_problems(
     tier: str | None = Query(default=None),
     location: str | None = Query(default=None),
     category: str | None = Query(default=None),
+    limit: int = Query(default=DEFAULT_PAGE_LIMIT, ge=1, le=MAX_PAGE_LIMIT),
+    offset: int = Query(default=0, ge=0),
     session: Session = Depends(get_session),
 ) -> list[ProblemOut]:
     problem_repo = SqlAlchemyProblemRepo(session)
     commitment_repo = SqlAlchemyCommitmentRepo(session)
-    problems = problem_repo.search(q=q, tier=tier, location=location, category=category)
-    return [
-        problem_to_out(p, commitment_repo.count_active_by_role_for_problem(p.id))
-        for p in problems
-    ]
+    problems = problem_repo.search(
+        q=q, tier=tier, location=location, category=category, limit=limit, offset=offset
+    )
+    # Batched (issue #77 N+1 fix): one grouped query across every
+    # returned problem id instead of one `count_active_by_role_for_problem`
+    # round trip per problem.
+    role_counts = commitment_repo.count_active_by_role_for_problems([p.id for p in problems])
+    return [problem_to_out(p, role_counts.get(p.id, {})) for p in problems]
 
 
 @router.get("/{problem_id}", response_model=ProblemOut)

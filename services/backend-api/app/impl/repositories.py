@@ -23,9 +23,17 @@ from app.models.marketplace.matching import MatchRun, MatchRunStatus, SolutionMa
 from app.models.marketplace.organization import Organization, OrganizationMembership
 from app.models.marketplace.rfp import RFP, RFPRequirement
 from app.models.marketplace.solution import Solution, SolutionAttribute
+from app.interfaces.repositories import DEFAULT_PAGE_LIMIT
 from app.models.moderation import ModerationOverrideEvent, ModerationTargetType
 from app.models.problem import Problem
 from app.models.user import User
+
+# Safety-valve cap on how many rows SqlAlchemySolutionRepo.search fetches
+# from the DB before applying its Python-level `category_tag` filter
+# (see that method for why the filter can't be pushed into SQL). Keeps a
+# `category_tag` search from doing an unbounded table scan while still
+# giving pagination a large-enough candidate pool to page through.
+_CATEGORY_FILTER_FETCH_CAP = 1000
 
 
 class SqlAlchemyUserRepo:
@@ -34,6 +42,13 @@ class SqlAlchemyUserRepo:
 
     def get_by_id(self, user_id: str) -> User | None:
         return self.session.get(User, user_id)
+
+    def get_by_ids(self, user_ids: list[str]) -> dict[str, User]:
+        if not user_ids:
+            return {}
+        stmt = select(User).where(User.id.in_(user_ids))
+        users = self.session.execute(stmt).scalars().all()
+        return {u.id: u for u in users}
 
     def get_by_email(self, email: str) -> User | None:
         stmt = select(User).where(User.email == email)
@@ -72,6 +87,9 @@ class SqlAlchemyProblemRepo:
         tier: str | None = None,
         location: str | None = None,
         category: str | None = None,
+        *,
+        limit: int = DEFAULT_PAGE_LIMIT,
+        offset: int = 0,
     ) -> list[Problem]:
         stmt = select(Problem)
         if q:
@@ -83,7 +101,7 @@ class SqlAlchemyProblemRepo:
             stmt = stmt.where(Problem.location.ilike(f"%{location}%"))
         if category:
             stmt = stmt.where(Problem.category.ilike(f"%{category}%"))
-        stmt = stmt.order_by(Problem.created_at.desc())
+        stmt = stmt.order_by(Problem.created_at.desc()).limit(limit).offset(offset)
         return list(self.session.execute(stmt).scalars().all())
 
 
@@ -151,6 +169,25 @@ class SqlAlchemyCommitmentRepo:
         rows = self.session.execute(stmt).all()
         return {role: count for role, count in rows}
 
+    def count_active_by_role_for_problems(
+        self, problem_ids: list[str]
+    ) -> dict[str, dict[str, int]]:
+        if not problem_ids:
+            return {}
+        stmt = (
+            select(Commitment.problem_id, Commitment.role, func.count())
+            .where(
+                Commitment.problem_id.in_(problem_ids),
+                Commitment.status == CommitmentStatus.ACTIVE.value,
+            )
+            .group_by(Commitment.problem_id, Commitment.role)
+        )
+        rows = self.session.execute(stmt).all()
+        result: dict[str, dict[str, int]] = {}
+        for problem_id, role, count in rows:
+            result.setdefault(problem_id, {})[role] = count
+        return result
+
 
 class SqlAlchemyCheckpointRepo:
     def __init__(self, session: Session):
@@ -189,12 +226,17 @@ class SqlAlchemyFeedRepo:
         return post
 
     def list_posts_for_problem(
-        self, problem_id: str, *, include_hidden: bool = False
+        self,
+        problem_id: str,
+        *,
+        include_hidden: bool = False,
+        limit: int = DEFAULT_PAGE_LIMIT,
+        offset: int = 0,
     ) -> list[FeedPost]:
         stmt = select(FeedPost).where(FeedPost.problem_id == problem_id)
         if not include_hidden:
             stmt = stmt.where(FeedPost.hidden.is_(False))
-        stmt = stmt.order_by(FeedPost.created_at.desc())
+        stmt = stmt.order_by(FeedPost.created_at.desc()).limit(limit).offset(offset)
         return list(self.session.execute(stmt).scalars().all())
 
     def get_post(self, post_id: str) -> FeedPost | None:
@@ -216,12 +258,17 @@ class SqlAlchemyFeedRepo:
         return comment
 
     def list_comments_for_post(
-        self, post_id: str, *, include_hidden: bool = False
+        self,
+        post_id: str,
+        *,
+        include_hidden: bool = False,
+        limit: int = DEFAULT_PAGE_LIMIT,
+        offset: int = 0,
     ) -> list[Comment]:
         stmt = select(Comment).where(Comment.post_id == post_id)
         if not include_hidden:
             stmt = stmt.where(Comment.hidden.is_(False))
-        stmt = stmt.order_by(Comment.created_at.asc())
+        stmt = stmt.order_by(Comment.created_at.asc()).limit(limit).offset(offset)
         return list(self.session.execute(stmt).scalars().all())
 
     def get_comment(self, comment_id: str) -> Comment | None:
@@ -251,6 +298,17 @@ class SqlAlchemyFeedRepo:
     def like_count(self, post_id: str) -> int:
         stmt = select(func.count()).select_from(PostLike).where(PostLike.post_id == post_id)
         return self.session.execute(stmt).scalar_one()
+
+    def like_counts_for_posts(self, post_ids: list[str]) -> dict[str, int]:
+        if not post_ids:
+            return {}
+        stmt = (
+            select(PostLike.post_id, func.count())
+            .where(PostLike.post_id.in_(post_ids))
+            .group_by(PostLike.post_id)
+        )
+        rows = self.session.execute(stmt).all()
+        return {post_id: count for post_id, count in rows}
 
 
 class SqlAlchemyModerationRepo:
@@ -394,6 +452,8 @@ class SqlAlchemyRFPRepo:
         geography: str | None = None,
         resolution_mode: str | None = None,
         visibility: str | None = None,
+        limit: int = DEFAULT_PAGE_LIMIT,
+        offset: int = 0,
     ) -> list[RFP]:
         stmt = select(RFP)
         if industry:
@@ -404,7 +464,7 @@ class SqlAlchemyRFPRepo:
             stmt = stmt.where(RFP.resolution_mode == resolution_mode)
         if visibility:
             stmt = stmt.where(RFP.visibility == visibility)
-        stmt = stmt.order_by(RFP.created_at.desc())
+        stmt = stmt.order_by(RFP.created_at.desc()).limit(limit).offset(offset)
         return list(self.session.execute(stmt).scalars().all())
 
     def add_requirement(self, requirement: RFPRequirement) -> RFPRequirement:
@@ -441,6 +501,8 @@ class SqlAlchemySolutionRepo:
         category_tag: str | None = None,
         organization_id: str | None = None,
         status: str | None = None,
+        limit: int = DEFAULT_PAGE_LIMIT,
+        offset: int = 0,
     ) -> list[Solution]:
         stmt = select(Solution)
         if organization_id:
@@ -448,14 +510,34 @@ class SqlAlchemySolutionRepo:
         if status:
             stmt = stmt.where(Solution.status == status)
         stmt = stmt.order_by(Solution.created_at.desc())
-        solutions = list(self.session.execute(stmt).scalars().all())
-        if category_tag:
-            # category_tags is a JSON list column — filtering by
-            # membership is done in Python rather than a DB-specific JSON
-            # operator, since this must work identically against both
-            # SQLite (integration tests) and Postgres (dev/prod).
-            solutions = [s for s in solutions if category_tag in (s.category_tags or [])]
-        return solutions
+
+        if not category_tag:
+            # No Python-level filter needed — paginate directly in SQL,
+            # same as every other search() in this module.
+            stmt = stmt.limit(limit).offset(offset)
+            return list(self.session.execute(stmt).scalars().all())
+
+        # category_tags is a generic JSON list column (see
+        # app.models.marketplace.solution) with no containment operator
+        # that works identically on both SQLite (this repo's integration
+        # test backend) and Postgres (dev/prod), so membership is
+        # filtered in Python rather than in SQL — this is pre-existing
+        # behavior (issue #76's audit flagged it as a related bug, not
+        # something introduced here).
+        #
+        # Naively doing `LIMIT/OFFSET` in SQL *before* that Python filter
+        # would make pagination inconsistent (a page could come back
+        # short, or skip rows, depending on how many matches happened to
+        # fall in the fetched window). Instead: fetch a superset bounded
+        # by `_CATEGORY_FILTER_FETCH_CAP` (safety valve against an
+        # unbounded scan on a large table), filter by tag in Python, and
+        # only then apply `limit`/`offset` to the filtered list — so
+        # pagination behaves the same way it would if `category_tag`
+        # filtering were pushed into SQL.
+        superset_stmt = stmt.limit(_CATEGORY_FILTER_FETCH_CAP)
+        candidates = list(self.session.execute(superset_stmt).scalars().all())
+        matching = [s for s in candidates if category_tag in (s.category_tags or [])]
+        return matching[offset : offset + limit]
 
     def add_attribute(self, attribute: SolutionAttribute) -> SolutionAttribute:
         self.session.add(attribute)

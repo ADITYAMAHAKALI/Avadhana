@@ -176,3 +176,37 @@ def test_search_filters_by_industry(client):
 def test_get_nonexistent_rfp_is_404(client):
     resp = client.get("/marketplace/rfps/does-not-exist")
     assert resp.status_code == 404
+
+
+def test_search_rfps_default_limit_caps_at_20(client):
+    headers, _ = _signup_and_auth_headers(client, email="buyer-many@example.com")
+    org_id = _create_org(client, headers, name="Buyer Org Many")
+    for i in range(25):
+        client.post(
+            "/marketplace/rfps", json=_rfp_payload(org_id, title=f"RFP {i}"), headers=headers
+        )
+
+    resp = client.get("/marketplace/rfps")
+    assert resp.status_code == 200
+    assert len(resp.json()) == 20
+
+
+def test_search_rfps_limit_and_offset_page_through_results(client):
+    headers, _ = _signup_and_auth_headers(client, email="buyer-page@example.com")
+    org_id = _create_org(client, headers, name="Buyer Org Page")
+    for i in range(5):
+        client.post(
+            "/marketplace/rfps", json=_rfp_payload(org_id, title=f"PageRFP {i}"), headers=headers
+        )
+
+    page1 = client.get("/marketplace/rfps", params={"limit": 2, "offset": 0}).json()
+    page2 = client.get("/marketplace/rfps", params={"limit": 2, "offset": 2}).json()
+
+    assert [r["title"] for r in page1] == ["PageRFP 4", "PageRFP 3"]
+    assert [r["title"] for r in page2] == ["PageRFP 2", "PageRFP 1"]
+    assert not set(r["id"] for r in page1) & set(r["id"] for r in page2)
+
+
+def test_search_rfps_limit_is_capped_at_100(client):
+    resp = client.get("/marketplace/rfps", params={"limit": 500})
+    assert resp.status_code == 422

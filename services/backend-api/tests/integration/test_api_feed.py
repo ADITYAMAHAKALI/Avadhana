@@ -139,6 +139,141 @@ def test_comment_requires_commitment_and_public_read(client):
     assert len(resp_read.json()) == 1
 
 
+def test_list_posts_default_limit_caps_at_20(client):
+    headers = _signup_and_auth_headers(client, "poster-many@example.com")
+    problem_id = _create_problem(client, headers)
+    _commit(client, headers, problem_id)
+    for i in range(25):
+        client.post(f"/problems/{problem_id}/posts", json={"body": f"Post {i}"}, headers=headers)
+
+    resp = client.get(f"/problems/{problem_id}/posts")
+    assert resp.status_code == 200
+    assert len(resp.json()) == 20
+
+
+def test_list_posts_limit_and_offset_page_through_results(client):
+    headers = _signup_and_auth_headers(client, "poster-page@example.com")
+    problem_id = _create_problem(client, headers)
+    _commit(client, headers, problem_id)
+    for i in range(5):
+        client.post(f"/problems/{problem_id}/posts", json={"body": f"PagePost {i}"}, headers=headers)
+
+    page1 = client.get(f"/problems/{problem_id}/posts", params={"limit": 2, "offset": 0}).json()
+    page2 = client.get(f"/problems/{problem_id}/posts", params={"limit": 2, "offset": 2}).json()
+
+    assert [p["body"] for p in page1] == ["PagePost 4", "PagePost 3"]
+    assert [p["body"] for p in page2] == ["PagePost 2", "PagePost 1"]
+    assert not set(p["id"] for p in page1) & set(p["id"] for p in page2)
+
+
+def test_list_posts_batched_authors_and_like_counts_are_correct(client):
+    """Regression test for the issue #77 N+1 fix: batching the author
+    lookup (UserRepoPort.get_by_ids) and like-count lookup
+    (FeedRepoPort.like_counts_for_posts) must produce identical
+    per-post author names / like counts to what the old
+    one-query-per-post path returned."""
+    alice_headers = _signup_and_auth_headers(client, "alice-batch@example.com")
+    bob_headers = _signup_and_auth_headers(client, "bob-batch@example.com")
+    problem_id = _create_problem(client, alice_headers)
+    _commit(client, alice_headers, problem_id, role="thinker")
+    _commit(client, bob_headers, problem_id, role="actor")
+
+    post_a = client.post(
+        f"/problems/{problem_id}/posts", json={"body": "Alice's post"}, headers=alice_headers
+    ).json()
+    post_b = client.post(
+        f"/problems/{problem_id}/posts", json={"body": "Bob's post"}, headers=bob_headers
+    ).json()
+
+    # Two likes on post_a (from both members), none on post_b.
+    client.post(f"/problems/{problem_id}/posts/{post_a['id']}/like", headers=alice_headers)
+    client.post(f"/problems/{problem_id}/posts/{post_a['id']}/like", headers=bob_headers)
+
+    resp = client.get(f"/problems/{problem_id}/posts")
+    assert resp.status_code == 200
+    by_id = {p["id"]: p for p in resp.json()}
+
+    assert by_id[post_a["id"]]["authorName"] == "Test User"
+    assert by_id[post_a["id"]]["roleLabel"] == "Thinker"
+    assert by_id[post_a["id"]]["likeCount"] == 2
+
+    assert by_id[post_b["id"]]["authorName"] == "Test User"
+    assert by_id[post_b["id"]]["roleLabel"] == "Actor"
+    assert by_id[post_b["id"]]["likeCount"] == 0
+
+
+def test_list_comments_default_limit_caps_at_20(client):
+    headers = _signup_and_auth_headers(client, "commenter-many@example.com")
+    problem_id = _create_problem(client, headers)
+    _commit(client, headers, problem_id)
+    post = client.post(f"/problems/{problem_id}/posts", json={"body": "Post"}, headers=headers).json()
+    for i in range(25):
+        client.post(
+            f"/problems/{problem_id}/posts/{post['id']}/comments",
+            json={"body": f"Comment {i}"},
+            headers=headers,
+        )
+
+    resp = client.get(f"/problems/{problem_id}/posts/{post['id']}/comments")
+    assert resp.status_code == 200
+    assert len(resp.json()) == 20
+
+
+def test_list_comments_limit_and_offset_page_through_results(client):
+    headers = _signup_and_auth_headers(client, "commenter-page@example.com")
+    problem_id = _create_problem(client, headers)
+    _commit(client, headers, problem_id)
+    post = client.post(f"/problems/{problem_id}/posts", json={"body": "Post"}, headers=headers).json()
+    for i in range(5):
+        client.post(
+            f"/problems/{problem_id}/posts/{post['id']}/comments",
+            json={"body": f"PageComment {i}"},
+            headers=headers,
+        )
+
+    # Comments are returned oldest-first (see list_comments_for_post).
+    page1 = client.get(
+        f"/problems/{problem_id}/posts/{post['id']}/comments", params={"limit": 2, "offset": 0}
+    ).json()
+    page2 = client.get(
+        f"/problems/{problem_id}/posts/{post['id']}/comments", params={"limit": 2, "offset": 2}
+    ).json()
+
+    assert [c["body"] for c in page1] == ["PageComment 0", "PageComment 1"]
+    assert [c["body"] for c in page2] == ["PageComment 2", "PageComment 3"]
+    assert not set(c["id"] for c in page1) & set(c["id"] for c in page2)
+
+
+def test_list_comments_batched_authors_are_correct(client):
+    """Regression test for the issue #77 N+1 fix on comment authors."""
+    alice_headers = _signup_and_auth_headers(client, "alice-comment@example.com")
+    bob_headers = _signup_and_auth_headers(client, "bob-comment@example.com")
+    problem_id = _create_problem(client, alice_headers)
+    _commit(client, alice_headers, problem_id, role="thinker")
+    _commit(client, bob_headers, problem_id, role="backer")
+    post = client.post(
+        f"/problems/{problem_id}/posts", json={"body": "Post"}, headers=alice_headers
+    ).json()
+
+    client.post(
+        f"/problems/{problem_id}/posts/{post['id']}/comments",
+        json={"body": "Alice comment"},
+        headers=alice_headers,
+    )
+    client.post(
+        f"/problems/{problem_id}/posts/{post['id']}/comments",
+        json={"body": "Bob comment"},
+        headers=bob_headers,
+    )
+
+    resp = client.get(f"/problems/{problem_id}/posts/{post['id']}/comments")
+    assert resp.status_code == 200
+    comments = {c["body"]: c for c in resp.json()}
+
+    assert comments["Alice comment"]["roleLabel"] == "Thinker"
+    assert comments["Bob comment"]["roleLabel"] == "Backer"
+
+
 def test_abandoned_member_loses_posting_rights(client, db_session):
     from datetime import timedelta
 
