@@ -27,6 +27,20 @@ RUN pip install --no-cache-dir .
 COPY alembic.ini ./
 COPY migrations/ ./migrations/
 
+# Run as a dedicated unprivileged user rather than the image default
+# (root) — see issue #85. UID/GID 1000 chosen to match the pod-level
+# securityContext.runAsUser/runAsGroup pinned in infra/k8s/backend-api/
+# deployment.yaml (kept consistent across all four custom-built service
+# images so one UID/GID scheme covers the fleet). chown after all
+# root-owned COPY/RUN steps above so appuser can read app code and
+# alembic can write nothing at runtime (no migrations dir writes
+# expected — alembic.ini's script location is read-only at runtime,
+# only `alembic upgrade head` invocations touch the DB, not the fs).
+RUN groupadd --gid 1000 appuser \
+    && useradd --uid 1000 --gid appuser --create-home --shell /usr/sbin/nologin appuser \
+    && chown -R appuser:appuser /app
+USER appuser
+
 EXPOSE 8000
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

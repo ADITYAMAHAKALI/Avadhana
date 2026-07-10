@@ -25,10 +25,32 @@ spec:
       labels:
         app: sarvam-mock
     spec:
+      # Pod-level securityContext (issue #85): runAsUser/runAsGroup 1000
+      # match the `appuser` uid/gid 1000 created in
+      # services/sarvam-mock/Containerfile's USER directive — same
+      # UID/GID scheme as backend-api and ai-coordinator-worker for
+      # consistency across the fleet.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
       containers:
         - name: sarvam-mock
           image: avadhana/sarvam-mock:dev
           imagePullPolicy: IfNotPresent
+          # Container-level hardening (issue #85). readOnlyRootFilesystem:
+          # true — verified locally (podman run --read-only --tmpfs
+          # /tmp) that the mock server starts and serves /healthz with
+          # no filesystem writes; it's a stateless FastAPI stub.
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           ports:
             - containerPort: 8080
               name: http
@@ -51,3 +73,9 @@ spec:
             limits:
               cpu: 100m
               memory: 128Mi
+      volumes:
+        # Backs the /tmp mount above so the container can run with
+        # readOnlyRootFilesystem: true (issue #85) while still having
+        # scratch space if any dependency needs it.
+        - name: tmp
+          emptyDir: {}

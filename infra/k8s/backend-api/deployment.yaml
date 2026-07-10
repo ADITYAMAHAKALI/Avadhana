@@ -19,10 +19,44 @@ spec:
       labels:
         app: backend-api
     spec:
+      # Pod-level securityContext (issue #85): runAsUser/runAsGroup 1000
+      # match the `appuser` uid/gid 1000 created in
+      # services/backend-api/Containerfile's USER directive — pinned
+      # explicitly (rather than relying on the image default alone) so
+      # a manifest change can't silently start the container as root
+      # even if a future image edit drops the Containerfile USER line.
+      # fsGroup 1000 makes the `tmp` emptyDir below group-writable by
+      # the same uid.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
       containers:
         - name: backend-api
           image: avadhana/backend-api:dev
           imagePullPolicy: IfNotPresent
+          # Container-level hardening (issue #85): no privilege
+          # escalation via setuid/setgid binaries, and drop every Linux
+          # capability — this is a plain uvicorn HTTP server, it never
+          # needs raw sockets, chown, bind to <1024 (port 8000 is
+          # unprivileged), or any other capability.
+          #
+          # readOnlyRootFilesystem: true — verified locally (podman run
+          # --read-only --tmpfs /tmp) that the app starts and serves
+          # /healthz with no writes anywhere except possibly /tmp
+          # (stdlib/library scratch space); app code itself does no
+          # file writes (no tempfile/log-to-disk usage found). The
+          # emptyDir below covers /tmp so nothing needs root-owned
+          # writable space on the root fs.
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           ports:
             - containerPort: 8000
               name: http
@@ -50,3 +84,9 @@ spec:
             limits:
               cpu: 250m
               memory: 256Mi
+      volumes:
+        # Backs the /tmp mount above so the container can run with
+        # readOnlyRootFilesystem: true (issue #85) while still having
+        # scratch space if any dependency needs it.
+        - name: tmp
+          emptyDir: {}

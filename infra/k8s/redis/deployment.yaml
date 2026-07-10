@@ -18,9 +18,34 @@ spec:
       labels:
         app: redis
     spec:
+      # Pod-level securityContext (issue #85): the redis:7-alpine image
+      # already ships a dedicated `redis` user — verified locally
+      # (`podman run --rm redis:7-alpine getent passwd redis`) as
+      # uid=999 gid=1000 — so no custom user is created here, just
+      # pinned explicitly. fsGroup 1000 covers the tmp emptyDir below.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 1000
+        fsGroup: 1000
       containers:
         - name: redis
           image: redis:7-alpine
+          # Container-level hardening (issue #85). readOnlyRootFilesystem:
+          # true — verified locally (podman run --user 999:1000
+          # --read-only --tmpfs /tmp) that redis-server starts and
+          # responds to PING with no persistence configured (this
+          # Deployment has no volume — see the comment above about no
+          # named volume/durability — so redis never needs to write
+          # RDB/AOF files to disk here).
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           ports:
             - containerPort: 6379
               name: redis
@@ -34,3 +59,8 @@ spec:
               command: ["redis-cli", "ping"]
             initialDelaySeconds: 10
             periodSeconds: 10
+      volumes:
+        # Backs the /tmp mount above so the container can run with
+        # readOnlyRootFilesystem: true (issue #85).
+        - name: tmp
+          emptyDir: {}
