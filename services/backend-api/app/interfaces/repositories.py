@@ -27,6 +27,9 @@ from typing import Protocol
 from app.models.checkpoint import CommitmentCheckpoint
 from app.models.commitment import Commitment
 from app.models.feed import Comment, FeedPost
+from app.models.marketplace.organization import Organization, OrganizationMembership
+from app.models.marketplace.rfp import RFP, RFPRequirement
+from app.models.marketplace.solution import Solution, SolutionAttribute
 from app.models.moderation import ModerationOverrideEvent
 from app.models.problem import Problem
 from app.models.user import User
@@ -165,6 +168,72 @@ class ModerationRepoPort(Protocol):
         ...
 
 
+class OrganizationRepoPort(Protocol):
+    def get_by_id(self, organization_id: str) -> Organization | None: ...
+
+    def add(self, organization: Organization) -> Organization: ...
+
+    def add_membership(self, membership: OrganizationMembership) -> OrganizationMembership: ...
+
+    def get_membership(
+        self, organization_id: str, user_id: str
+    ) -> OrganizationMembership | None:
+        """The membership row (if any) for this user in this
+        organization — used both for the member-only gate on
+        RFP/Solution creation and the admin-only gate on adding new
+        members."""
+        ...
+
+    def list_memberships_for_organization(
+        self, organization_id: str
+    ) -> list[OrganizationMembership]: ...
+
+    def list_organizations_for_user(self, user_id: str) -> list[Organization]:
+        """Every Organization the given user holds a membership in —
+        backs `GET /marketplace/organizations/mine`."""
+        ...
+
+
+class RFPRepoPort(Protocol):
+    def get_by_id(self, rfp_id: str) -> RFP | None: ...
+
+    def add(self, rfp: RFP) -> RFP: ...
+
+    def search(
+        self,
+        *,
+        industry: str | None = None,
+        geography: str | None = None,
+        resolution_mode: str | None = None,
+        visibility: str | None = None,
+    ) -> list[RFP]:
+        """Unfiltered by caller identity — visibility (invite-only vs.
+        public) is enforced by the service layer, which knows the
+        caller's org memberships, not by this port."""
+        ...
+
+    def add_requirement(self, requirement: RFPRequirement) -> RFPRequirement: ...
+
+    def list_requirements(self, rfp_id: str) -> list[RFPRequirement]: ...
+
+
+class SolutionRepoPort(Protocol):
+    def get_by_id(self, solution_id: str) -> Solution | None: ...
+
+    def add(self, solution: Solution) -> Solution: ...
+
+    def search(
+        self,
+        *,
+        category_tag: str | None = None,
+        organization_id: str | None = None,
+    ) -> list[Solution]: ...
+
+    def add_attribute(self, attribute: SolutionAttribute) -> SolutionAttribute: ...
+
+    def list_attributes(self, solution_id: str) -> list[SolutionAttribute]: ...
+
+
 __all__ = [
     "UserRepoPort",
     "ProblemRepoPort",
@@ -172,4 +241,7 @@ __all__ = [
     "CheckpointRepoPort",
     "FeedRepoPort",
     "ModerationRepoPort",
+    "OrganizationRepoPort",
+    "RFPRepoPort",
+    "SolutionRepoPort",
 ]
