@@ -117,6 +117,21 @@
   border-color: var(--color-actor);
 }
 
+/* Draft disclaimer scaffolding for GitHub issue #78 (legal review not yet
+   done — see docs/legal-draft-DO-NOT-USE-WITHOUT-REVIEW.md). Deliberately
+   styled as a visible warning, not buried fine print. */
+.actorDisclaimer {
+  margin-top: 11px;
+  padding: 9px 12px;
+  border-radius: var(--radius-md);
+  background: #FDEDED;
+  border: 1px solid #F3B9B9;
+  color: #A32020;
+  font-size: 12.5px;
+  line-height: 1.5;
+  font-weight: 500;
+}
+
 .actions {
   display: flex;
   gap: 10px;
