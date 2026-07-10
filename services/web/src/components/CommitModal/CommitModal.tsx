@@ -4,6 +4,7 @@ import { commitmentsApi } from '../../data/real/commitmentsApi';
 import { notifyFocusSlotsChanged } from '../../data/focusSlotsRefresh';
 import { rememberCommitmentId } from '../../data/commitmentIdCache';
 import { ApiError } from '../../data/real/httpClient';
+import { onActivateKeyDown } from '../../utils/a11y';
 import styles from './CommitModal.module.css';
 
 const SPECIALIZATIONS: ActorSpecialization[] = [
@@ -85,7 +86,9 @@ export function CommitModal({ problem, onClose, onCommitted }: CommitModalProps)
     <>
       <div className={styles.header}>
         <div className={styles.eyebrow}>COMMITTING A FOCUS SLOT</div>
-        <div className={styles.headerTitle}>{problem.title}</div>
+        <div className={styles.headerTitle} id="commit-modal-title">
+          {problem.title}
+        </div>
         <div className={styles.headerBody}>
           This spends 1 of your 3 slots and locks you in for a minimum of 90 days — no early exit. It&apos;s the earliest
           checkpoint, not a deadline to finish.
@@ -96,15 +99,26 @@ export function CommitModal({ problem, onClose, onCommitted }: CommitModalProps)
         <div className={styles.body}>
           <div className={styles.stepLabel}>Step 1 · Choose how you&apos;ll show up</div>
           <div className={styles.roleList}>
-            <div className={roleCardClass('thinker')} onClick={() => pickRole('thinker')}>
+            <button type="button" className={roleCardClass('thinker')} aria-pressed={role === 'thinker'} onClick={() => pickRole('thinker')}>
               <div className={styles.roleCardHead}>
                 <span className={`${styles.roleDot} ${styles.roleDotThinker}`} />
                 <span className={styles.roleName}>Thinker</span>
               </div>
               <div className={styles.roleDesc}>Research, strategy, framing. No execution or funding required.</div>
-            </div>
+            </button>
 
-            <div className={roleCardClass('actor')} onClick={() => pickRole('actor')}>
+            {/* Kept as a div (not a <button>) because it contains nested
+                interactive spec-chip buttons — a <button> can't validly
+                contain other interactive elements. role="button" + tabIndex
+                + onKeyDown replicate button semantics/keyboard behavior. */}
+            <div
+              className={roleCardClass('actor')}
+              role="button"
+              tabIndex={0}
+              aria-pressed={role === 'actor'}
+              onClick={() => pickRole('actor')}
+              onKeyDown={onActivateKeyDown(() => pickRole('actor'))}
+            >
               <div className={styles.roleCardHead}>
                 <span className={`${styles.roleDot} ${styles.roleDotActor}`} />
                 <span className={styles.roleName}>Actor</span>
@@ -114,16 +128,18 @@ export function CommitModal({ problem, onClose, onCommitted }: CommitModalProps)
                 <>
                   <div className={styles.specRow}>
                     {SPECIALIZATIONS.map((name) => (
-                      <span
+                      <button
                         key={name}
+                        type="button"
                         className={specChipClass(name)}
+                        aria-pressed={specialization === name}
                         onClick={(e) => {
                           e.stopPropagation();
                           setSpecialization(name);
                         }}
                       >
                         {name}
-                      </span>
+                      </button>
                     ))}
                   </div>
                   {/* Draft disclaimer scaffolding for GitHub issue #78 — NOT reviewed by a
@@ -138,13 +154,13 @@ export function CommitModal({ problem, onClose, onCommitted }: CommitModalProps)
               )}
             </div>
 
-            <div className={roleCardClass('backer')} onClick={() => pickRole('backer')}>
+            <button type="button" className={roleCardClass('backer')} aria-pressed={role === 'backer'} onClick={() => pickRole('backer')}>
               <div className={styles.roleCardHead}>
                 <span className={`${styles.roleDot} ${styles.roleDotBacker}`} />
                 <span className={styles.roleName}>Backer</span>
               </div>
               <div className={styles.roleDesc}>Financial contribution. No time commitment to think or act.</div>
-            </div>
+            </button>
           </div>
 
           <div className={styles.actions}>

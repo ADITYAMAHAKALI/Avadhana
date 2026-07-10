@@ -13,14 +13,19 @@ const ROLE_LABEL: Record<CommittedProblemSummary['role'], string> = {
   backer: 'Backer',
 };
 
+// Note: "Problem workspace", "Problem graph", and "Coordinator & moderation"
+// are intentionally not fixed sidebar links — they're per-problem pages
+// (routes are /problems/:problemId, /graph/:problemId, /coordinator/:problemId
+// in App.tsx) with no single sensible destination from a persistent nav
+// item. Real navigation into a specific problem happens from "Your focus"
+// (committed problems, DashboardPage) or "Discover problems", and from
+// within a problem's own page (ProblemPage links to that problem's Graph
+// and Coordinator views). See issue #74.
 const NAV_ITEMS = [
   { to: '/dashboard', label: 'Your focus' },
   { to: '/discover', label: 'Discover problems' },
   { to: '/problems/new', label: '+ Propose a problem' },
-  { to: '/problems/p-groundwater', label: 'Problem workspace' },
-  { to: '/graph/p-groundwater', label: 'Problem graph' },
   { to: '/profile', label: 'Your record' },
-  { to: '/coordinator/p-groundwater', label: 'Coordinator & moderation' },
   { to: '/marketplace', label: 'Marketplace' },
 ];
 

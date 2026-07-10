@@ -628,7 +628,9 @@
 }
 
 .invokeButton {
+  display: block;
   width: 100%;
+  box-sizing: border-box;
   font-family: inherit;
   font-weight: 600;
   font-size: 13px;
@@ -639,6 +641,8 @@
   border-radius: var(--radius-md);
   cursor: pointer;
   margin-top: 16px;
+  text-align: center;
+  text-decoration: none;
 }
 
 .notFound {
