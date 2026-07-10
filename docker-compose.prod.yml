@@ -81,6 +81,13 @@ services:
       SARVAM_API_BASE_URL: ${SARVAM_API_BASE_URL}
       SARVAM_USE_MOCK: ${SARVAM_USE_MOCK}
       CORS_ALLOWED_ORIGIN: ${CORS_ALLOWED_ORIGIN}
+      # Producer-side: enqueues Marketplace matching jobs (issue #68)
+      # onto the same Redis broker ai-coordinator-worker listens on —
+      # see app/interfaces/job_enqueuer.py. Was already documented as
+      # coming from the shared secret in infra/k8s/backend-api/
+      # configmap.yaml's comment, but missing here until this issue
+      # actually needed it.
+      REDIS_URL: ${REDIS_URL}
     depends_on:
       postgres:
         condition: service_healthy
