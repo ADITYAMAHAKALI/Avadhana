@@ -20,7 +20,7 @@ from typing import Literal
 
 from pydantic import Field
 
-from app.schemas import CamelModel
+from app.schemas import CamelModel, Tier
 
 OrganizationRole = Literal["admin", "member"]
 ResolutionMode = Literal["community", "marketplace", "both"]
@@ -105,13 +105,27 @@ class RFPOut(CamelModel):
     resolution_mode: ResolutionMode
     visibility: RFPVisibility
     status: RFPStatus
-    # Column-only for now (issue #70 wires the real promotion flow) —
-    # always null until that lands.
+    # Set by POST /marketplace/rfps/{rfp_id}/promote (issue #70) once the
+    # RFP has been promoted into a civic Problem; null until then.
     promoted_problem_id: str | None
     # Column-only for now (billing gating is a later phase) — always
     # False.
     is_billable: bool
     created_at: datetime
+
+
+class RFPPromoteRequest(CamelModel):
+    """Body for `POST /marketplace/rfps/{rfp_id}/promote` (issue #70).
+
+    `tier` is required rather than defaulted or inferred: `RFP` has no
+    tier-equivalent field (it carries a budget range, not CLAUDE.md's
+    S-D hours/funding rubric), and guessing a tier from budget alone
+    would invent semantics CLAUDE.md doesn't define. Same `Tier` literal
+    `ProblemCreateRequest.tier` uses, so validation stays consistent with
+    every other path that creates a Problem.
+    """
+
+    tier: Tier
 
 
 # --- Solutions ------------------------------------------------------------

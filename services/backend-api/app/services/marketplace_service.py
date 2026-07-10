@@ -27,6 +27,7 @@ from app.interfaces.repositories import (
     BillingEventRepoPort,
     MatchRepoPort,
     OrganizationRepoPort,
+    ProblemRepoPort,
     RFPRepoPort,
     SolutionRepoPort,
 )
@@ -37,12 +38,15 @@ from app.models.marketplace.organization import (
     OrganizationMembership,
     OrganizationMembershipRole,
 )
-from app.models.marketplace.rfp import RFP, RFPRequirement
+from app.models.marketplace.rfp import RFP, ResolutionMode, RFPRequirement
 from app.models.marketplace.solution import Solution, SolutionAttribute, SolutionStatus
+from app.models.problem import VALID_TIERS, Problem
 from app.services.errors import (
     NotOrgAdminError,
     NotOrgMemberError,
     OrganizationNotFoundError,
+    RFPAlreadyPromotedError,
+    RFPNotCommunityResolvableError,
     RFPNotFoundError,
     SolutionNotFoundError,
 )
@@ -475,3 +479,104 @@ def get_matches_for_rfp(
             results.append((match, solution))
 
     return match_run, results
+
+
+# --- Community-promotion bridge (GitHub issue #70) ------------------------
+
+
+def promote_rfp_to_problem(
+    *,
+    rfp_id: str,
+    caller_user_id: str,
+    tier: str,
+    org_repo: OrganizationRepoPort,
+    rfp_repo: RFPRepoPort,
+    problem_repo: ProblemRepoPort,
+) -> Problem:
+    """`POST /marketplace/rfps/{rfp_id}/promote` — the one deliberate
+    bridge between the Marketplace and the civic platform (CLAUDE.md
+    "Solution Marketplace Architecture": "The one deliberate bridge
+    between the two systems is the 'promote to community' flow ... once
+    an RFP crosses that bridge, the resulting civic Problem plays by the
+    civic rules like any other").
+
+    Gate order mirrors `add_rfp_requirement`/`trigger_match_run`: 404 if
+    the RFP doesn't exist, then the same member-of-posting-org gate
+    (`require_org_member`) every other RFP-mutating action uses — no new
+    authorization rule invented for this endpoint.
+
+    `resolution_mode` must be `community` or `both` (CLAUDE.md "Two
+    resolution modes per RFP") — a `marketplace`-only RFP was never meant
+    to become a civic Problem; reject rather than silently promoting it
+    anyway.
+
+    `promoted_problem_id` must be null going in — promotion is one-shot.
+    A second attempt raises rather than either creating a duplicate
+    Problem or silently no-op'ing (issue #70 build brief: "reject a
+    second attempt ... rather than silently creating a duplicate Problem
+    or silently no-op'ing").
+
+    Field mapping RFP -> Problem (see module's issue #70 build brief for
+    the full reasoning):
+      - `title`            -> `title`            (as-is)
+      - `description`      -> `summary`           (Problem's field is
+        named `summary`, not `description`, but it's the same
+        free-text "what is this problem" content)
+      - `geography`        -> `location`          (same concept, RFP's
+        name for it differs from Problem's)
+      - `industry`         -> `category`          (closest available
+        mapping: an RFP's `industry`, e.g. "logistics"/"healthcare", is
+        the buyer-side domain a civic reader would recognize the same
+        way `Problem.category` free-text is used elsewhere — there is no
+        better-fitting RFP field, and leaving `category` blank would
+        throw away information the buyer already supplied)
+      - `created_by_user_id` -> the promoting caller's user id (the
+        person who clicked "promote", not the RFP's original poster if
+        different — consistent with `create_problem`'s use of the
+        request's authenticated caller)
+      - `tier`              -> caller-supplied, required (RFP has no
+        tier-equivalent field; CLAUDE.md's S-D rubric is hours/funding
+        bands that don't map from an RFP's budget range without
+        inventing semantics CLAUDE.md doesn't define — so the promoting
+        caller must supply one explicitly, same shape as
+        `ProblemCreateRequest.tier`, rather than have this function guess)
+
+    Does NOT create a Commitment or spend anyone's focus slot — promotion
+    only creates the Problem row; committing to it afterward goes through
+    the normal civic commit flow like any other problem (issue #70 build
+    brief, point 3).
+
+    The new Problem gains no Marketplace-specific field — the
+    traceability link is one-directional, living entirely on
+    `RFP.promoted_problem_id` (CLAUDE.md: "the Problem itself doesn't
+    know or care it came from the Marketplace").
+    """
+    rfp = rfp_repo.get_by_id(rfp_id)
+    if rfp is None:
+        raise RFPNotFoundError(rfp_id)
+    require_org_member(organization_id=rfp.organization_id, user_id=caller_user_id, org_repo=org_repo)
+
+    if rfp.resolution_mode not in (ResolutionMode.COMMUNITY.value, ResolutionMode.BOTH.value):
+        raise RFPNotCommunityResolvableError(rfp_id, rfp.resolution_mode)
+
+    if rfp.promoted_problem_id is not None:
+        raise RFPAlreadyPromotedError(rfp_id, rfp.promoted_problem_id)
+
+    if tier not in VALID_TIERS:
+        raise ValueError(f"Invalid tier {tier!r}; must be one of {VALID_TIERS}.")
+
+    problem = problem_repo.add(
+        Problem(
+            title=rfp.title,
+            summary=rfp.description,
+            location=rfp.geography,
+            category=rfp.industry,
+            tier=tier,
+            created_by_user_id=caller_user_id,
+        )
+    )
+
+    rfp.promoted_problem_id = problem.id
+    rfp_repo.add(rfp)
+
+    return problem

@@ -129,3 +129,32 @@ class SolutionNotFoundError(Exception):
     def __init__(self, solution_id: str):
         self.solution_id = solution_id
         super().__init__(f"Solution {solution_id} not found.")
+
+
+class RFPNotCommunityResolvableError(Exception):
+    """Raised when promotion is attempted on an RFP whose
+    `resolution_mode` is `marketplace`-only (issue #70). Only `community`
+    and `both` RFPs may be promoted into a civic Problem — see CLAUDE.md
+    "Solution Marketplace Architecture" -> "Two resolution modes per
+    RFP"."""
+
+    def __init__(self, rfp_id: str, resolution_mode: str):
+        self.rfp_id = rfp_id
+        self.resolution_mode = resolution_mode
+        super().__init__(
+            f"RFP {rfp_id} has resolution_mode={resolution_mode!r}; only "
+            "'community' or 'both' RFPs can be promoted into a civic Problem."
+        )
+
+
+class RFPAlreadyPromotedError(Exception):
+    """Raised when promotion is attempted a second time on an RFP whose
+    `promoted_problem_id` is already set — an RFP may only be promoted
+    once, never creating a second, duplicate Problem."""
+
+    def __init__(self, rfp_id: str, promoted_problem_id: str):
+        self.rfp_id = rfp_id
+        self.promoted_problem_id = promoted_problem_id
+        super().__init__(
+            f"RFP {rfp_id} was already promoted to Problem {promoted_problem_id}."
+        )

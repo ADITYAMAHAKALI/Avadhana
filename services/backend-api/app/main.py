@@ -33,6 +33,7 @@ from app.routers import auth, commitments, feed, moderation, problems, users
 from app.routers.marketplace import matches as marketplace_matches
 from app.routers.marketplace import matching as marketplace_matching
 from app.routers.marketplace import organizations as marketplace_organizations
+from app.routers.marketplace import promotion as marketplace_promotion
 from app.routers.marketplace import rfps as marketplace_rfps
 from app.routers.marketplace import solutions as marketplace_solutions
 
@@ -81,6 +82,10 @@ app.include_router(marketplace_matching.router)
 # separate router from marketplace_matching (#66's synchronous
 # attribute-only MVP).
 app.include_router(marketplace_matches.router)
+# Community-promotion bridge (issue #70): the one deliberate crossing
+# point from a Marketplace RFP into a real civic Problem — see
+# app/routers/marketplace/promotion.py module docstring.
+app.include_router(marketplace_promotion.router)
 
 
 # --- Providers (composition root wiring) ------------------------------

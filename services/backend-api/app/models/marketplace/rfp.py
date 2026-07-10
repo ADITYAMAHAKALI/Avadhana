@@ -8,8 +8,10 @@ Marketplace Architecture" -> "Two resolution modes per RFP" and "Domain
 model".
 
 `promoted_problem_id` and `is_billable`:
-- `promoted_problem_id`: the actual promote-to-community flow is issue
-  #70, not built here — just the nullable FK column.
+- `promoted_problem_id`: set by
+  `app.services.marketplace_service.promote_rfp_to_problem` (issue #70,
+  `POST /marketplace/rfps/{rfp_id}/promote`) once an RFP is promoted into
+  a civic Problem. Null until then; an RFP may only be promoted once.
 - `is_billable`: set True by `app.services.marketplace_service.create_rfp`
   (issue #71) when the posting Organization's `rfp_free_quota_used`
   (post-increment) exceeds `rfp_free_quota_limit` — see
@@ -80,12 +82,11 @@ class RFP(Base):
         String(20), nullable=False, default=RFPStatus.DRAFT.value
     )
 
-    # Column only, unused — promotion flow lands in issue #70. No FK
-    # constraint enforced at the DB level here since `problems.id` lives
-    # in the civic schema this module deliberately doesn't couple to at
-    # the ORM-relationship level (see module docstring); a plain nullable
-    # string column keeps that boundary clean while still recording the
-    # link once #70 starts writing to it.
+    # Set by the promotion flow (issue #70). No FK constraint enforced at
+    # the DB level here since `problems.id` lives in the civic schema
+    # this module deliberately doesn't couple to at the ORM-relationship
+    # level (see module docstring); a plain nullable string column keeps
+    # that boundary clean while still recording the link.
     promoted_problem_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
 
     # Column only, always False for now — real billing gating is a later
