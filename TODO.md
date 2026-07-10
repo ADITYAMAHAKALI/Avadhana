@@ -120,21 +120,21 @@ Rewards follow-through, not activity — do not build a second engagement-farmin
 
 - [x] [Implement Avadhana Web app shell from Claude Design mockup](https://github.com/ADITYAMAHAKALI/Avadhana/issues/61)
 
-## [Solution Marketplace](https://github.com/ADITYAMAHAKALI/Avadhana/issues/62) — designed, not yet sequenced
+## [Solution Marketplace](https://github.com/ADITYAMAHAKALI/Avadhana/issues/62) — all 11 sub-issues built
 
-B2B/B2G RFP-to-Solution matching marketplace (multi-attribute + multi-embedding Reciprocal Rank Fusion). **Independent of the civic 3-slot/90-day-lock/commitment-gated-voice mechanic** — see CLAUDE.md "Solution Marketplace Architecture" for the full design, domain model, and open questions, and `architecture/modules/05-solution-marketplace.drawio.png` / `06-marketplace-matching-flow.drawio.png` for diagrams. Architecture and issues are ready; **sequencing against the SLC v1 plan above (which still comes first) is an open product decision, not yet made** — don't start building this ahead of the civic core loop pilot without an explicit call to reprioritize.
+B2B/B2G RFP-to-Solution matching marketplace (multi-attribute + multi-embedding Reciprocal Rank Fusion). **Independent of the civic 3-slot/90-day-lock/commitment-gated-voice mechanic** — see CLAUDE.md "Solution Marketplace Architecture" for the full design, domain model, and open questions, and `architecture/modules/05-solution-marketplace.drawio.png` / `06-marketplace-matching-flow.drawio.png` for diagrams. **2026-07-10: explicit reprioritization call made** (previously an open product decision) — Marketplace was built out fully in this session, ahead of the SLC v1 pilot (VPS deploy + real problem recruitment are still the two open SLC v1 items). Legal/ToS review before real B2B usage is still an open gap (see business-viability audit, 2026-07-10).
 
-- [ ] [Design Organization + membership schema](https://github.com/ADITYAMAHAKALI/Avadhana/issues/63)
-- [ ] [RFP schema + posting flow](https://github.com/ADITYAMAHAKALI/Avadhana/issues/64)
-- [ ] [Solution schema + publishing flow](https://github.com/ADITYAMAHAKALI/Avadhana/issues/65)
-- [ ] [Structured attribute-match scoring (no ML)](https://github.com/ADITYAMAHAKALI/Avadhana/issues/66)
-- [ ] [Embeddings provider integration](https://github.com/ADITYAMAHAKALI/Avadhana/issues/67)
-- [ ] [Matching engine: rank fusion (RRF)](https://github.com/ADITYAMAHAKALI/Avadhana/issues/68)
-- [ ] [Matching results UI: ranked shortlist + explainability](https://github.com/ADITYAMAHAKALI/Avadhana/issues/69)
-- [ ] [Community-promotion bridge (RFP → civic Problem)](https://github.com/ADITYAMAHAKALI/Avadhana/issues/70)
-- [ ] [Free-quota tracking + billing paywall gate](https://github.com/ADITYAMAHAKALI/Avadhana/issues/71)
-- [ ] [Web frontend: Marketplace tab](https://github.com/ADITYAMAHAKALI/Avadhana/issues/72)
-- [ ] [Free-tier abuse safeguards](https://github.com/ADITYAMAHAKALI/Avadhana/issues/73)
+- [x] [Design Organization + membership schema](https://github.com/ADITYAMAHAKALI/Avadhana/issues/63)
+- [x] [RFP schema + posting flow](https://github.com/ADITYAMAHAKALI/Avadhana/issues/64)
+- [x] [Solution schema + publishing flow](https://github.com/ADITYAMAHAKALI/Avadhana/issues/65)
+- [x] [Structured attribute-match scoring (no ML)](https://github.com/ADITYAMAHAKALI/Avadhana/issues/66)
+- [x] [Embeddings provider integration](https://github.com/ADITYAMAHAKALI/Avadhana/issues/67) — OpenAI `text-embedding-3-small`, pgvector on Postgres with a SQLite-portable fallback type for tests
+- [x] [Matching engine: rank fusion (RRF)](https://github.com/ADITYAMAHAKALI/Avadhana/issues/68) — async job on ai-coordinator-worker's `marketplace-matching` queue
+- [x] [Matching results UI: ranked shortlist + explainability](https://github.com/ADITYAMAHAKALI/Avadhana/issues/69) — trigger + poll flow, full per-signal score/rank breakdown, verified live in browser
+- [x] [Community-promotion bridge (RFP → civic Problem)](https://github.com/ADITYAMAHAKALI/Avadhana/issues/70) — caller supplies tier explicitly (no RFP-side rubric equivalent to infer it from)
+- [x] [Free-quota tracking + billing paywall gate](https://github.com/ADITYAMAHAKALI/Avadhana/issues/71) — quota tracked + `BillingEvent` ledger; no payment processor wired (out of scope per CLAUDE.md)
+- [x] [Web frontend: Marketplace tab](https://github.com/ADITYAMAHAKALI/Avadhana/issues/72)
+- [x] [Free-tier abuse safeguards](https://github.com/ADITYAMAHAKALI/Avadhana/issues/73) — partial: per-user rate limit on Organization creation; doesn't stop multi-account abuse (documented gap)
 
 ## Security Checklist (pre-launch)
 
