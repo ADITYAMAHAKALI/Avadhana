@@ -1,14 +1,18 @@
 """Avadhana AI Coordinator Worker — RQ worker with a real SARVAM AI client.
 
-The worker listens on a single queue named "ai-coordinator" and processes
-jobs enqueued onto it. In production, the Backend API (or a scheduled job,
-per CLAUDE.md's "every 3-6 hours" cadence) will enqueue real coordination
-jobs here. `ping_job` proves Redis/RQ connectivity; `sarvam_ping_job` proves
-SARVAM AI connectivity (real API or local mock, per `SARVAM_USE_MOCK`).
+The worker listens on two queues: "ai-coordinator" (AI coordination jobs)
+and "marketplace-matching" (the Solution Marketplace's RRF matching
+engine, issue #68 — see `impl/marketplace_matching_job.py`). In
+production, the Backend API (or a scheduled job, per CLAUDE.md's "every
+3-6 hours" cadence for AI coordination, or the Marketplace's "on RFP
+publish" trigger) enqueues real jobs onto whichever queue applies.
+`ping_job` proves Redis/RQ connectivity; `sarvam_ping_job` proves SARVAM
+AI connectivity (real API or local mock, per `SARVAM_USE_MOCK`).
 
 Real summarization/checklist-generation/off-topic-detection prompts and job
 logic are NOT implemented here — that's issues #20-23, built on top of the
-`SarvamClientPort` wired up in this module.
+`SarvamClientPort` wired up in this module. The Marketplace matching job
+(issue #68) IS implemented, in `impl/marketplace_matching_job.py`.
 
 This module is the composition root: it is the one place that constructs
 concrete implementations (`impl.rq_job_queue.RQJobQueue`,
@@ -18,13 +22,22 @@ and wires them in via constructor injection / module-level globals (the
 latter only because RQ jobs are plain re-importable functions — see
 `ping_job`'s docstring for why). Nothing else in this service should import
 `redis`/`rq`/`httpx` directly — depend on the ports instead so backends can
-be swapped later without touching callers.
+be swapped later without touching callers. `impl.marketplace_matching_job.
+run_matching_job` is the one exception to the "module-level global" DI
+pattern: it constructs its own SQLAlchemy engine lazily from
+`DATABASE_URL` on first use (mirroring how it constructs nothing at
+import time), since a plain top-level function has no `main()`-populated
+global to receive an engine through, and a query-scoped engine per job
+invocation is simpler than adding a second module-level global just for
+this one job.
 
 Usage:
     python worker.py
 
 Configuration:
     REDIS_URL — full Redis connection string (default: redis://localhost:6379/0)
+    DATABASE_URL — Postgres connection string, required only when a
+        marketplace-matching job actually runs (see db_config.py).
     See `sarvam_config.py` for SARVAM-related env vars.
 """
 
@@ -39,6 +52,14 @@ from interfaces.sarvam_client import ChatMessage, SarvamClientPort
 from sarvam_config import resolve_sarvam_config
 
 QUEUE_NAME = "ai-coordinator"
+# Marketplace RRF matching (issue #68) — a second, distinctly-named
+# queue on the SAME Redis broker (CLAUDE.md "Service boundaries": "same
+# broker, a distinctly-named marketplace-matching queue"), not a second
+# worker process. `impl.marketplace_matching_job.run_matching_job` is
+# the job handler `backend-api`'s trigger endpoint enqueues by dotted
+# path (see that service's app/interfaces/job_enqueuer.py for why a
+# string path, not a direct import, crosses the service boundary).
+MARKETPLACE_MATCHING_QUEUE_NAME = "marketplace-matching"
 DEFAULT_REDIS_URL = "redis://localhost:6379/0"
 
 # RQ re-imports this module by path to execute jobs in the worker process,
@@ -105,7 +126,7 @@ def main() -> None:
         default_model=sarvam_config.default_model,
     )
 
-    run_worker(job_queue, [QUEUE_NAME])
+    run_worker(job_queue, [QUEUE_NAME, MARKETPLACE_MATCHING_QUEUE_NAME])
 
 
 if __name__ == "__main__":
