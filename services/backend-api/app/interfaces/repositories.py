@@ -28,6 +28,7 @@ from app.models.checkpoint import CommitmentCheckpoint
 from app.models.commitment import Commitment
 from app.models.feed import Comment, FeedPost
 from app.models.marketplace.billing import BillingEvent
+from app.models.marketplace.matching import MatchRun, SolutionMatch
 from app.models.marketplace.organization import Organization, OrganizationMembership
 from app.models.marketplace.rfp import RFP, RFPRequirement
 from app.models.marketplace.solution import Solution, SolutionAttribute
@@ -256,6 +257,38 @@ class BillingEventRepoPort(Protocol):
         ...
 
 
+class MatchRepoPort(Protocol):
+    """Backend-api's side of the RRF matching engine (issue #68) — only
+    what the HTTP surface needs: create the `MatchRun` row a trigger
+    request enqueues (status=pending) and read back the most recent
+    completed run's ranked matches. The job itself (writing `SolutionMatch`
+    rows, transitioning `MatchRun.status`) runs in
+    `services/ai-coordinator-worker`, deliberately NOT through this repo
+    port — see that service's `impl/marketplace_matching_job.py` module
+    docstring for why it uses SQLAlchemy Core against the same tables
+    instead of importing this ORM-based port from a separate,
+    independently-deployable service."""
+
+    def add_match_run(self, match_run: MatchRun) -> MatchRun:
+        """Insert-only from backend-api's perspective — the trigger
+        endpoint creates exactly one `pending` row per trigger request.
+        Only the worker job (via its own SQLAlchemy Core connection, not
+        this port) ever transitions a run's status afterward."""
+        ...
+
+    def get_latest_completed_run(self, rfp_id: str) -> MatchRun | None:
+        """Most recent (`started_at` descending) `MatchRun` with
+        `status == "completed"` for this RFP — backs
+        `GET /marketplace/rfps/{rfp_id}/matches`. Returns None if no run
+        has ever completed (e.g. never triggered, or still running/failed)."""
+        ...
+
+    def list_matches_for_run(self, match_run_id: str) -> list[SolutionMatch]:
+        """All `SolutionMatch` rows for one run, ordered by `rank`
+        ascending (best match first)."""
+        ...
+
+
 __all__ = [
     "UserRepoPort",
     "ProblemRepoPort",
@@ -267,4 +300,5 @@ __all__ = [
     "RFPRepoPort",
     "SolutionRepoPort",
     "BillingEventRepoPort",
+    "MatchRepoPort",
 ]

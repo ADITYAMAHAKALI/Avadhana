@@ -13,6 +13,7 @@ from app.models.commitment import Commitment
 from app.models.feed import Comment, FeedPost, PostLike
 from app.models.marketplace.billing import BillingEvent
 from app.models.marketplace.embedding import EmbeddingVector
+from app.models.marketplace.matching import MatchRun, SolutionMatch
 from app.models.marketplace.organization import Organization, OrganizationMembership
 from app.models.marketplace.rfp import RFP, RFPRequirement
 from app.models.marketplace.solution import Solution, SolutionAttribute
@@ -38,4 +39,6 @@ __all__ = [
     "SolutionAttribute",
     "BillingEvent",
     "EmbeddingVector",
+    "MatchRun",
+    "SolutionMatch",
 ]

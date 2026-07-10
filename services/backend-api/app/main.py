@@ -30,6 +30,7 @@ from app.impl.service_info import SERVICE_NAME, SERVICE_VERSION, StaticServiceIn
 from app.interfaces.health import HealthCheckPort
 from app.interfaces.service_info import ServiceInfoPort
 from app.routers import auth, commitments, feed, moderation, problems, users
+from app.routers.marketplace import matches as marketplace_matches
 from app.routers.marketplace import matching as marketplace_matching
 from app.routers.marketplace import organizations as marketplace_organizations
 from app.routers.marketplace import rfps as marketplace_rfps
@@ -74,6 +75,12 @@ app.include_router(marketplace_solutions.router)
 # non-ML attribute-match slice, issue #66; embeddings/RRF land as
 # separate later routers), not a re-registration of the same routes.
 app.include_router(marketplace_matching.router)
+# RRF rank-fusion matching (issue #68): trigger + read endpoints for the
+# async, multi-signal matching engine — see
+# app/routers/marketplace/matches.py module docstring for why this is a
+# separate router from marketplace_matching (#66's synchronous
+# attribute-only MVP).
+app.include_router(marketplace_matches.router)
 
 
 # --- Providers (composition root wiring) ------------------------------

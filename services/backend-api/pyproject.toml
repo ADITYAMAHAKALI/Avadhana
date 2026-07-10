@@ -33,6 +33,18 @@ dependencies = [
     # Python, no compiled/native dependency, so this is a lightweight
     # addition either way.
     "pgvector>=0.3,<1.0",
+    # Producer-side client for the shared Redis/RQ job-queue broker that
+    # `services/ai-coordinator-worker` already listens on (CLAUDE.md
+    # "Service boundaries": "reuses the existing Redis/RQ job-queue
+    # infrastructure ... same broker"). This is the first thing in
+    # backend-api that needs to ENQUEUE a job (issue #68's RFP matching
+    # trigger) rather than just calling another service's HTTP API — see
+    # app/interfaces/job_enqueuer.py's module docstring. Versions pinned
+    # to match services/ai-coordinator-worker/pyproject.toml exactly so
+    # both processes speak the same RQ wire format against the same
+    # broker.
+    "rq>=1.16,<2.0",
+    "redis>=5.0,<6.0",
 ]
 
 [project.optional-dependencies]

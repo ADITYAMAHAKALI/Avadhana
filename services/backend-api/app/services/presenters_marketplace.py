@@ -8,17 +8,21 @@ CLAUDE.md "Solution Marketplace Architecture").
 """
 
 from app.models.marketplace.billing import BillingEvent
+from app.models.marketplace.matching import MatchRun, SolutionMatch
 from app.models.marketplace.organization import Organization, OrganizationMembership
 from app.models.marketplace.rfp import RFP, RFPRequirement
 from app.models.marketplace.solution import Solution, SolutionAttribute
 from app.schemas_marketplace import (
     AttributeMatchOut,
     BillingEventOut,
+    MatchRunTriggerOut,
     OrganizationMembershipOut,
     OrganizationOut,
+    RFPMatchesOut,
     RFPOut,
     RFPRequirementOut,
     SolutionAttributeOut,
+    SolutionMatchOut,
     SolutionOut,
 )
 from app.services.marketplace_matching import AttributeMatchResult
@@ -115,4 +119,35 @@ def attribute_match_to_out(result: AttributeMatchResult) -> AttributeMatchOut:
         solution=solution_to_out(result.solution),
         score=result.score,
         matched_requirement_ids=result.matched_requirement_ids,
+    )
+
+
+def match_run_to_out(match_run: MatchRun) -> MatchRunTriggerOut:
+    return MatchRunTriggerOut(
+        id=match_run.id,
+        rfp_id=match_run.rfp_id,
+        status=match_run.status,
+        started_at=match_run.started_at,
+    )
+
+
+def solution_match_to_out(match: SolutionMatch, solution: Solution) -> SolutionMatchOut:
+    return SolutionMatchOut(
+        id=match.id,
+        match_run_id=match.match_run_id,
+        solution=solution_to_out(solution),
+        final_rrf_score=match.final_rrf_score,
+        rank=match.rank,
+        signal_scores=dict(match.signal_scores or {}),
+        signal_ranks=dict(match.signal_ranks or {}),
+    )
+
+
+def rfp_matches_to_out(
+    match_run: MatchRun | None,
+    matches_with_solutions: list[tuple[SolutionMatch, Solution]],
+) -> RFPMatchesOut:
+    return RFPMatchesOut(
+        match_run=match_run_to_out(match_run) if match_run is not None else None,
+        matches=[solution_match_to_out(match, solution) for match, solution in matches_with_solutions],
     )

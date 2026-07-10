@@ -117,5 +117,25 @@ class Settings:
     def embeddings_model(self) -> str:
         return os.environ.get("EMBEDDINGS_MODEL", "text-embedding-3-small")
 
+    # --- Job queue (issue #68) ---
+    # The same Redis broker `services/ai-coordinator-worker` listens on
+    # (CLAUDE.md "Service boundaries": "same broker, a distinctly-named
+    # marketplace-matching queue"). Defaults match
+    # `ai-coordinator-worker/worker.py`'s `DEFAULT_REDIS_URL` exactly so
+    # local dev (docker-compose/k8s, both expose Redis on the same
+    # well-known address) works without extra configuration.
+
+    @property
+    def redis_url(self) -> str:
+        return os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+
+    @property
+    def marketplace_matching_queue_name(self) -> str:
+        # Matches services/ai-coordinator-worker/impl/marketplace_matching_job
+        # .py's QUEUE_NAME constant — kept as a literal (not imported)
+        # since these are two independently-deployable services with no
+        # shared Python import path (see app/interfaces/job_enqueuer.py).
+        return "marketplace-matching"
+
 
 settings = Settings()

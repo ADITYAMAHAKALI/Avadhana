@@ -19,6 +19,7 @@ from app.models.checkpoint import CheckpointEventType, CommitmentCheckpoint
 from app.models.commitment import Commitment, CommitmentStatus
 from app.models.feed import Comment, FeedPost, PostLike
 from app.models.marketplace.billing import BillingEvent
+from app.models.marketplace.matching import MatchRun, MatchRunStatus, SolutionMatch
 from app.models.marketplace.organization import Organization, OrganizationMembership
 from app.models.marketplace.rfp import RFP, RFPRequirement
 from app.models.marketplace.solution import Solution, SolutionAttribute
@@ -486,5 +487,40 @@ class SqlAlchemyBillingEventRepo:
             select(BillingEvent)
             .where(BillingEvent.organization_id == organization_id)
             .order_by(BillingEvent.occurred_at.desc())
+        )
+        return list(self.session.execute(stmt).scalars().all())
+
+
+class SqlAlchemyMatchRepo:
+    """Backend-api's side of the RRF matching engine (issue #68) — see
+    `app.interfaces.repositories.MatchRepoPort` docstring for why the
+    actual match-computation job (writing `SolutionMatch` rows,
+    transitioning `MatchRun.status`) does NOT go through this repo: it
+    runs in the separately-deployable `ai-coordinator-worker` service via
+    its own SQLAlchemy Core connection, not this ORM-based port."""
+
+    def __init__(self, session: Session):
+        self.session = session
+
+    def add_match_run(self, match_run: MatchRun) -> MatchRun:
+        self.session.add(match_run)
+        self.session.commit()
+        self.session.refresh(match_run)
+        return match_run
+
+    def get_latest_completed_run(self, rfp_id: str) -> MatchRun | None:
+        stmt = (
+            select(MatchRun)
+            .where(MatchRun.rfp_id == rfp_id, MatchRun.status == MatchRunStatus.COMPLETED.value)
+            .order_by(MatchRun.started_at.desc())
+            .limit(1)
+        )
+        return self.session.execute(stmt).scalar_one_or_none()
+
+    def list_matches_for_run(self, match_run_id: str) -> list[SolutionMatch]:
+        stmt = (
+            select(SolutionMatch)
+            .where(SolutionMatch.match_run_id == match_run_id)
+            .order_by(SolutionMatch.rank.asc())
         )
         return list(self.session.execute(stmt).scalars().all())

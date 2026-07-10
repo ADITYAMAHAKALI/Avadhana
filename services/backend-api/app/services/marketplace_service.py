@@ -22,13 +22,16 @@ count exceeds `rfp_free_quota_limit` (then also setting the new RFP's
 `is_billable = True`), otherwise `free_rfp_posted`.
 """
 
+from app.interfaces.job_enqueuer import JobEnqueuerPort
 from app.interfaces.repositories import (
     BillingEventRepoPort,
+    MatchRepoPort,
     OrganizationRepoPort,
     RFPRepoPort,
     SolutionRepoPort,
 )
 from app.models.marketplace.billing import BillingEvent, BillingEventType
+from app.models.marketplace.matching import MatchRun, MatchRunStatus, SolutionMatch
 from app.models.marketplace.organization import (
     Organization,
     OrganizationMembership,
@@ -364,3 +367,111 @@ def get_attribute_matches_for_rfp(
     ]
 
     return rank_attribute_matches(candidates, requirements)
+
+
+# --- RRF rank-fusion matching (GitHub issue #68) -------------------------
+
+MARKETPLACE_MATCHING_JOB_NAME = "impl.marketplace_matching_job.run_matching_job"
+
+
+def trigger_match_run(
+    *,
+    rfp_id: str,
+    caller_user_id: str,
+    org_repo: OrganizationRepoPort,
+    rfp_repo: RFPRepoPort,
+    match_repo: MatchRepoPort,
+    job_enqueuer: JobEnqueuerPort,
+    queue_name: str,
+) -> MatchRun:
+    """`POST /marketplace/rfps/{rfp_id}/matches/trigger` (CLAUDE.md
+    "invoked on-demand" pattern, applied to the Marketplace matching
+    engine the same way the AI coordinator is invoked on-demand
+    elsewhere). Gated the same way posting a requirement onto an RFP is
+    (`require_org_member` via the RFP's owning organization) — reusing
+    the existing member-only gate rather than inventing a separate rule
+    for who may trigger matching on someone else's RFP.
+
+    Creates exactly one new `MatchRun` row (status=pending) — a re-run
+    (re-trigger after an edit) always creates a BRAND NEW row rather
+    than resetting a prior one (see `app.models.marketplace.matching`
+    module docstring on why `MatchRun` mutates in place during its own
+    lifecycle but the set of runs stays append-only) — then enqueues the
+    actual computation onto `queue_name` (`marketplace-matching` in
+    production) for `services/ai-coordinator-worker` to pick up
+    asynchronously. This function never blocks on the job actually
+    running — same "job queue, not blocking the request" rule CLAUDE.md
+    states for AI coordination.
+    """
+    rfp = rfp_repo.get_by_id(rfp_id)
+    if rfp is None:
+        raise RFPNotFoundError(rfp_id)
+    require_org_member(organization_id=rfp.organization_id, user_id=caller_user_id, org_repo=org_repo)
+
+    match_run = match_repo.add_match_run(
+        MatchRun(
+            rfp_id=rfp_id,
+            triggered_by=caller_user_id,
+            model_versions_used={},
+            status=MatchRunStatus.PENDING.value,
+        )
+    )
+
+    job_enqueuer.enqueue(
+        queue_name,
+        MARKETPLACE_MATCHING_JOB_NAME,
+        rfp_id=rfp_id,
+        triggered_by=caller_user_id,
+        match_run_id=match_run.id,
+    )
+
+    return match_run
+
+
+def get_matches_for_rfp(
+    *,
+    rfp_id: str,
+    caller_user_id: str | None,
+    org_repo: OrganizationRepoPort,
+    rfp_repo: RFPRepoPort,
+    solution_repo: SolutionRepoPort,
+    match_repo: MatchRepoPort,
+) -> tuple[MatchRun | None, list[tuple[SolutionMatch, Solution]]]:
+    """`GET /marketplace/rfps/{rfp_id}/matches` — the most recent
+    COMPLETED run's ranked matches, same invite-only visibility gate as
+    the RFP itself and as #66's `get_attribute_matches_for_rfp` (a
+    buyer's private RFP shouldn't leak its match results to outsiders
+    any more than the RFP's own content or its attribute-matches should).
+
+    Returns `(None, [])` if no run has ever completed for this RFP yet
+    (never triggered, or still pending/running/failed) — this is a valid
+    empty state, not an error; the caller (router) renders it as a 200
+    with an empty result rather than a 404, since the RFP itself exists
+    and is visible.
+
+    Solutions referenced by a `SolutionMatch` are hydrated here (one
+    `solution_repo.get_by_id` per match) so the presenter can render full
+    `SolutionOut` details, matching `get_attribute_matches_for_rfp`'s
+    contract of always returning full Solution objects, not just ids. A
+    Solution that's since been deleted (no deletion path exists yet, but
+    defensively) is skipped rather than raising — a stale reference
+    shouldn't 500 the whole read.
+    """
+    rfp = rfp_repo.get_by_id(rfp_id)
+    if rfp is None:
+        raise RFPNotFoundError(rfp_id)
+    if not rfp_visible_to_caller(rfp=rfp, caller_user_id=caller_user_id, org_repo=org_repo):
+        raise RFPNotFoundError(rfp_id)
+
+    match_run = match_repo.get_latest_completed_run(rfp_id)
+    if match_run is None:
+        return None, []
+
+    matches = match_repo.list_matches_for_run(match_run.id)
+    results: list[tuple[SolutionMatch, Solution]] = []
+    for match in matches:
+        solution = solution_repo.get_by_id(match.solution_id)
+        if solution is not None:
+            results.append((match, solution))
+
+    return match_run, results

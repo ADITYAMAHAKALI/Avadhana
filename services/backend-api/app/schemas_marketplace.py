@@ -176,6 +176,53 @@ class AttributeMatchOut(CamelModel):
     matched_requirement_ids: list[str]
 
 
+# --- RRF rank-fusion matching (GitHub issue #68) -------------------------
+
+MatchRunStatus = Literal["pending", "running", "completed", "failed"]
+
+
+class MatchRunTriggerOut(CamelModel):
+    """Response for `POST /marketplace/rfps/{rfp_id}/matches/trigger` —
+    the newly-created (status=pending) `MatchRun` row. The actual
+    ranking computation happens asynchronously in
+    `services/ai-coordinator-worker`; callers poll
+    `GET /marketplace/rfps/{rfp_id}/matches` for results once the run
+    completes (no webhook/notification exists yet)."""
+
+    id: str
+    rfp_id: str
+    status: MatchRunStatus
+    started_at: datetime
+
+
+class SolutionMatchOut(CamelModel):
+    """One ranked Solution from a completed `MatchRun` — the
+    `GET /marketplace/rfps/{rfp_id}/matches` response item. Carries the
+    full per-signal breakdown (`signal_scores`/`signal_ranks`) for
+    explainability (CLAUDE.md: "a buyer can see *why* a match
+    happened"), mirroring `AttributeMatchOut.matched_requirement_ids`'s
+    transparency goal one level up, across every fused signal rather
+    than just the attribute-match one."""
+
+    id: str
+    match_run_id: str
+    solution: SolutionOut
+    final_rrf_score: float
+    rank: int
+    signal_scores: dict[str, float]
+    signal_ranks: dict[str, int]
+
+
+class RFPMatchesOut(CamelModel):
+    """Full response for `GET /marketplace/rfps/{rfp_id}/matches` — the
+    most recent completed run's metadata plus its ranked matches. A null
+    `match_run` (empty `matches`) means no run has completed yet for
+    this RFP."""
+
+    match_run: MatchRunTriggerOut | None
+    matches: list[SolutionMatchOut]
+
+
 # --- Error payloads (documented shapes, transported via HTTPException
 # detail, same convention as app/schemas.py) -------------------------------
 
