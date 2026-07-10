@@ -11,6 +11,7 @@ from app.models.marketplace.organization import Organization, OrganizationMember
 from app.models.marketplace.rfp import RFP, RFPRequirement
 from app.models.marketplace.solution import Solution, SolutionAttribute
 from app.schemas_marketplace import (
+    AttributeMatchOut,
     OrganizationMembershipOut,
     OrganizationOut,
     RFPOut,
@@ -18,6 +19,7 @@ from app.schemas_marketplace import (
     SolutionAttributeOut,
     SolutionOut,
 )
+from app.services.marketplace_matching import AttributeMatchResult
 
 
 def organization_to_out(organization: Organization) -> OrganizationOut:
@@ -92,4 +94,12 @@ def solution_attribute_to_out(attribute: SolutionAttribute) -> SolutionAttribute
         attribute_key=attribute.attribute_key,
         attribute_value=attribute.attribute_value,
         created_at=attribute.created_at,
+    )
+
+
+def attribute_match_to_out(result: AttributeMatchResult) -> AttributeMatchOut:
+    return AttributeMatchOut(
+        solution=solution_to_out(result.solution),
+        score=result.score,
+        matched_requirement_ids=result.matched_requirement_ids,
     )

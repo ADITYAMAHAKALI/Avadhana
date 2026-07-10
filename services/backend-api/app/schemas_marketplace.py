@@ -146,6 +146,23 @@ class SolutionOut(CamelModel):
     created_at: datetime
 
 
+# --- Matching (GitHub issue #66: attribute-match scoring, no ML) ---------
+
+
+class AttributeMatchOut(CamelModel):
+    """One ranked Solution against a single RFP's requirements — the
+    `GET /marketplace/rfps/{rfp_id}/attribute-matches` response item.
+    `score` is normalized to [0, 1]: see
+    `app.services.marketplace_matching.score_attribute_match` docstring
+    for the exact "matched weight / total requirement weight" formula.
+    `matched_requirement_ids` is the explainability breakdown — which of
+    the RFP's requirements this Solution actually satisfied."""
+
+    solution: SolutionOut
+    score: float
+    matched_requirement_ids: list[str]
+
+
 # --- Error payloads (documented shapes, transported via HTTPException
 # detail, same convention as app/schemas.py) -------------------------------
 

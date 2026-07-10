@@ -227,6 +227,7 @@ class SolutionRepoPort(Protocol):
         *,
         category_tag: str | None = None,
         organization_id: str | None = None,
+        status: str | None = None,
     ) -> list[Solution]: ...
 
     def add_attribute(self, attribute: SolutionAttribute) -> SolutionAttribute: ...
