@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from app.core.auth_dependencies import get_current_user
 from app.db.session import get_session
 from app.impl.repositories import SqlAlchemyOrganizationRepo, SqlAlchemySolutionRepo
+from app.interfaces.repositories import DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT
 from app.models.user import User
 from app.schemas_marketplace import (
     SolutionAttributeCreateRequest,
@@ -65,10 +66,14 @@ def create_solution_route(
 def search_solutions_route(
     category_tag: str | None = Query(default=None, alias="categoryTag"),
     organization_id: str | None = Query(default=None, alias="organizationId"),
+    limit: int = Query(default=DEFAULT_PAGE_LIMIT, ge=1, le=MAX_PAGE_LIMIT),
+    offset: int = Query(default=0, ge=0),
     session: Session = Depends(get_session),
 ) -> list[SolutionOut]:
     solution_repo = SqlAlchemySolutionRepo(session)
-    solutions = solution_repo.search(category_tag=category_tag, organization_id=organization_id)
+    solutions = solution_repo.search(
+        category_tag=category_tag, organization_id=organization_id, limit=limit, offset=offset
+    )
     return [solution_to_out(s) for s in solutions]
 
 

@@ -6,12 +6,13 @@ dependency built for issue #8. Read (GET) endpoints are public by design
 (share links must work for non-members).
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.auth_dependencies import get_current_user
 from app.db.session import get_session
 from app.impl.repositories import SqlAlchemyFeedRepo, SqlAlchemyUserRepo
+from app.interfaces.repositories import DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT
 from app.models.commitment import Commitment
 from app.models.user import User
 from app.schemas import CommentCreateRequest, CommentOut, FeedPostOut, LikeOut, PostCreateRequest
@@ -47,18 +48,27 @@ def create_post_route(
 
 @router.get("/problems/{problem_id}/posts", response_model=list[FeedPostOut])
 def list_posts_route(
-    problem_id: str, session: Session = Depends(get_session)
+    problem_id: str,
+    limit: int = Query(default=DEFAULT_PAGE_LIMIT, ge=1, le=MAX_PAGE_LIMIT),
+    offset: int = Query(default=0, ge=0),
+    session: Session = Depends(get_session),
 ) -> list[FeedPostOut]:
     feed_repo = SqlAlchemyFeedRepo(session)
     user_repo = SqlAlchemyUserRepo(session)
-    posts = feed_repo.list_posts_for_problem(problem_id)
+    posts = feed_repo.list_posts_for_problem(problem_id, limit=limit, offset=offset)
+
+    # Batched (issue #77 N+1 fix): one `WHERE id IN (...)` for authors and
+    # one grouped like-count query across all returned posts, instead of
+    # two round trips per post.
+    authors = user_repo.get_by_ids([p.author_user_id for p in posts])
+    like_counts = feed_repo.like_counts_for_posts([p.id for p in posts])
 
     out: list[FeedPostOut] = []
     for post in posts:
-        author = user_repo.get_by_id(post.author_user_id)
+        author = authors.get(post.author_user_id)
         if author is None:
             continue
-        out.append(post_to_out(post, author, like_count=feed_repo.like_count(post.id)))
+        out.append(post_to_out(post, author, like_count=like_counts.get(post.id, 0)))
     return out
 
 
@@ -113,15 +123,23 @@ def create_comment_route(
 
 @router.get("/problems/{problem_id}/posts/{post_id}/comments", response_model=list[CommentOut])
 def list_comments_route(
-    problem_id: str, post_id: str, session: Session = Depends(get_session)
+    problem_id: str,
+    post_id: str,
+    limit: int = Query(default=DEFAULT_PAGE_LIMIT, ge=1, le=MAX_PAGE_LIMIT),
+    offset: int = Query(default=0, ge=0),
+    session: Session = Depends(get_session),
 ) -> list[CommentOut]:
     feed_repo = SqlAlchemyFeedRepo(session)
     user_repo = SqlAlchemyUserRepo(session)
-    comments = feed_repo.list_comments_for_post(post_id)
+    comments = feed_repo.list_comments_for_post(post_id, limit=limit, offset=offset)
+
+    # Batched (issue #77 N+1 fix): one `WHERE id IN (...)` for comment
+    # authors instead of one `get_by_id` round trip per comment.
+    authors = user_repo.get_by_ids([c.author_user_id for c in comments])
 
     out: list[CommentOut] = []
     for comment in comments:
-        author = user_repo.get_by_id(comment.author_user_id)
+        author = authors.get(comment.author_user_id)
         if author is None:
             continue
         out.append(comment_to_out(comment, author))

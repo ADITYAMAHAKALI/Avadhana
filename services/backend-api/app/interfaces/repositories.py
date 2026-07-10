@@ -36,9 +36,23 @@ from app.models.moderation import ModerationOverrideEvent
 from app.models.problem import Problem
 from app.models.user import User
 
+# Pagination defaults/cap shared by every list/search port + router in
+# this module (issue #76). A single source of truth so "default 20, cap
+# 100" doesn't drift between e.g. problems and RFPs.
+DEFAULT_PAGE_LIMIT = 20
+MAX_PAGE_LIMIT = 100
+
 
 class UserRepoPort(Protocol):
     def get_by_id(self, user_id: str) -> User | None: ...
+
+    def get_by_ids(self, user_ids: list[str]) -> dict[str, User]:
+        """Batch lookup — one `WHERE id IN (...)` query instead of N
+        `get_by_id` round trips. Used to resolve feed post/comment
+        authors without an N+1 (issue #77). Returns a dict keyed by id;
+        unknown ids are simply absent, mirroring `get_by_id`'s `None`
+        for a miss."""
+        ...
 
     def get_by_email(self, email: str) -> User | None: ...
 
@@ -62,7 +76,13 @@ class ProblemRepoPort(Protocol):
         tier: str | None = None,
         location: str | None = None,
         category: str | None = None,
-    ) -> list[Problem]: ...
+        *,
+        limit: int = DEFAULT_PAGE_LIMIT,
+        offset: int = 0,
+    ) -> list[Problem]:
+        """`limit`/`offset` applied at the SQL level (issue #76), never
+        as a Python-level slice of an already-fetched full result."""
+        ...
 
 
 class CommitmentRepoPort(Protocol):
@@ -92,6 +112,18 @@ class CommitmentRepoPort(Protocol):
         """Live thinker/actor/backer counts for a problem."""
         ...
 
+    def count_active_by_role_for_problems(
+        self, problem_ids: list[str]
+    ) -> dict[str, dict[str, int]]:
+        """Batched form of `count_active_by_role_for_problem` — one
+        grouped query across all given problem ids instead of one query
+        per problem (issue #77 N+1 fix on `GET /problems`). Returns a
+        dict keyed by problem id; a problem id with no active commitments
+        at all is simply absent (caller should treat a missing key the
+        same as an empty role-count dict, same as `{}` from the
+        single-problem method)."""
+        ...
+
 
 class CheckpointRepoPort(Protocol):
     def add(self, checkpoint: CommitmentCheckpoint) -> CommitmentCheckpoint:
@@ -111,13 +143,19 @@ class FeedRepoPort(Protocol):
     def add_post(self, post: FeedPost) -> FeedPost: ...
 
     def list_posts_for_problem(
-        self, problem_id: str, *, include_hidden: bool = False
+        self,
+        problem_id: str,
+        *,
+        include_hidden: bool = False,
+        limit: int = DEFAULT_PAGE_LIMIT,
+        offset: int = 0,
     ) -> list[FeedPost]:
-        """Newest first. `include_hidden=False` (the default, used by
-        every normal read endpoint) filters `hidden=True` rows out at
-        the query level — hidden content never round-trips to a normal
-        caller. Only the admin-only moderation-log / future "view as
-        admin" paths pass `include_hidden=True`."""
+        """Newest first, `limit`/`offset` applied at the SQL level (issue
+        #76). `include_hidden=False` (the default, used by every normal
+        read endpoint) filters `hidden=True` rows out at the query level
+        — hidden content never round-trips to a normal caller. Only the
+        admin-only moderation-log / future "view as admin" paths pass
+        `include_hidden=True`."""
         ...
 
     def get_post(self, post_id: str) -> FeedPost | None:
@@ -135,10 +173,15 @@ class FeedRepoPort(Protocol):
     def add_comment(self, comment: Comment) -> Comment: ...
 
     def list_comments_for_post(
-        self, post_id: str, *, include_hidden: bool = False
+        self,
+        post_id: str,
+        *,
+        include_hidden: bool = False,
+        limit: int = DEFAULT_PAGE_LIMIT,
+        offset: int = 0,
     ) -> list[Comment]:
-        """See `list_posts_for_problem` for the `include_hidden`
-        contract."""
+        """See `list_posts_for_problem` for the `include_hidden` and
+        `limit`/`offset` contract."""
         ...
 
     def get_comment(self, comment_id: str) -> Comment | None:
@@ -155,6 +198,15 @@ class FeedRepoPort(Protocol):
         ...
 
     def like_count(self, post_id: str) -> int: ...
+
+    def like_counts_for_posts(self, post_ids: list[str]) -> dict[str, int]:
+        """Batched form of `like_count` — one grouped `COUNT(*) ...
+        GROUP BY post_id` query across all given post ids instead of one
+        query per post (issue #77 N+1 fix on `GET /problems/{id}/posts`).
+        A post id with zero likes is simply absent from the returned
+        dict (caller should treat a missing key as 0, same as
+        `like_count` returning 0 for a post with no likes)."""
+        ...
 
 
 class ModerationRepoPort(Protocol):
@@ -215,10 +267,16 @@ class RFPRepoPort(Protocol):
         geography: str | None = None,
         resolution_mode: str | None = None,
         visibility: str | None = None,
+        limit: int = DEFAULT_PAGE_LIMIT,
+        offset: int = 0,
     ) -> list[RFP]:
         """Unfiltered by caller identity — visibility (invite-only vs.
         public) is enforced by the service layer, which knows the
-        caller's org memberships, not by this port."""
+        caller's org memberships, not by this port. `limit`/`offset`
+        applied at the SQL level (issue #76); note the service layer
+        (`search_rfps`) further filters invite-only rows out in Python
+        *after* this call, so the page the caller ultimately sees can be
+        smaller than `limit` — see that function's docstring."""
         ...
 
     def add_requirement(self, requirement: RFPRequirement) -> RFPRequirement: ...
@@ -237,7 +295,23 @@ class SolutionRepoPort(Protocol):
         category_tag: str | None = None,
         organization_id: str | None = None,
         status: str | None = None,
-    ) -> list[Solution]: ...
+        limit: int = DEFAULT_PAGE_LIMIT,
+        offset: int = 0,
+    ) -> list[Solution]:
+        """`organization_id`/`status` are pushed into SQL and paginated
+        there directly. `category_tag` is NOT — `category_tags` is a
+        generic JSON list column (see `app.models.marketplace.solution`)
+        with no containment operator that works identically on both
+        SQLite (this repo's integration test backend) and Postgres
+        (dev/prod), so it's applied in Python after fetching, same as
+        before this port grew pagination (issue #76's audit flagged this
+        as a related, pre-existing bug). To keep `limit`/`offset`
+        meaningful *after* that Python filter, the implementation fetches
+        a larger internal superset from the DB, filters by
+        `category_tag` in Python, and only then applies `limit`/`offset`
+        to the filtered list — see `SqlAlchemySolutionRepo.search` for
+        the exact mechanics."""
+        ...
 
     def add_attribute(self, attribute: SolutionAttribute) -> SolutionAttribute: ...
 
@@ -290,6 +364,8 @@ class MatchRepoPort(Protocol):
 
 
 __all__ = [
+    "DEFAULT_PAGE_LIMIT",
+    "MAX_PAGE_LIMIT",
     "UserRepoPort",
     "ProblemRepoPort",
     "CommitmentRepoPort",

@@ -24,6 +24,7 @@ from app.impl.repositories import (
     SqlAlchemyOrganizationRepo,
     SqlAlchemyRFPRepo,
 )
+from app.interfaces.repositories import DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT
 from app.models.user import User
 from app.schemas_marketplace import (
     RFPCreateRequest,
@@ -105,6 +106,8 @@ def search_rfps_route(
     industry: str | None = Query(default=None),
     geography: str | None = Query(default=None),
     resolution_mode: str | None = Query(default=None, alias="resolutionMode"),
+    limit: int = Query(default=DEFAULT_PAGE_LIMIT, ge=1, le=MAX_PAGE_LIMIT),
+    offset: int = Query(default=0, ge=0),
     caller_user_id: str | None = Depends(_optional_user_id),
     session: Session = Depends(get_session),
 ) -> list[RFPOut]:
@@ -117,6 +120,8 @@ def search_rfps_route(
         resolution_mode=resolution_mode,
         org_repo=org_repo,
         rfp_repo=rfp_repo,
+        limit=limit,
+        offset=offset,
     )
     return [rfp_to_out(r) for r in rfps]
 

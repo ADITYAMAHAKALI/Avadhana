@@ -24,6 +24,9 @@ class FakeUserRepo:
     def get_by_id(self, user_id: str) -> User | None:
         return self.users.get(user_id)
 
+    def get_by_ids(self, user_ids: list[str]) -> dict[str, User]:
+        return {uid: self.users[uid] for uid in user_ids if uid in self.users}
+
     def get_by_email(self, email: str) -> User | None:
         for u in self.users.values():
             if u.email == email:
@@ -51,7 +54,7 @@ class FakeProblemRepo:
         self.problems[problem.id] = problem
         return problem
 
-    def search(self, q=None, tier=None, location=None, category=None) -> list[Problem]:
+    def search(self, q=None, tier=None, location=None, category=None, *, limit=20, offset=0) -> list[Problem]:
         results = list(self.problems.values())
         if q:
             results = [p for p in results if q.lower() in p.title.lower() or q.lower() in p.summary.lower()]
@@ -61,7 +64,7 @@ class FakeProblemRepo:
             results = [p for p in results if location.lower() in p.location.lower()]
         if category:
             results = [p for p in results if category.lower() in p.category.lower()]
-        return results
+        return results[offset : offset + limit]
 
 
 class FakeCommitmentRepo:
@@ -125,6 +128,15 @@ class FakeCommitmentRepo:
                 counts[c.role] = counts.get(c.role, 0) + 1
         return counts
 
+    def count_active_by_role_for_problems(self, problem_ids: list[str]) -> dict[str, dict[str, int]]:
+        result: dict[str, dict[str, int]] = {}
+        problem_id_set = set(problem_ids)
+        for c in self.commitments.values():
+            if c.problem_id in problem_id_set and c.status == CommitmentStatus.ACTIVE.value:
+                counts = result.setdefault(c.problem_id, {})
+                counts[c.role] = counts.get(c.role, 0) + 1
+        return result
+
 
 class FakeCheckpointRepo:
     def __init__(self):
@@ -155,12 +167,13 @@ class FakeFeedRepo:
         return post
 
     def list_posts_for_problem(
-        self, problem_id: str, *, include_hidden: bool = False
+        self, problem_id: str, *, include_hidden: bool = False, limit: int = 20, offset: int = 0
     ) -> list[FeedPost]:
         posts = [p for p in self.posts.values() if p.problem_id == problem_id]
         if not include_hidden:
             posts = [p for p in posts if not p.hidden]
-        return sorted(posts, key=lambda p: p.created_at, reverse=True)
+        posts = sorted(posts, key=lambda p: p.created_at, reverse=True)
+        return posts[offset : offset + limit]
 
     def get_post(self, post_id: str) -> FeedPost | None:
         return self.posts.get(post_id)
@@ -177,12 +190,13 @@ class FakeFeedRepo:
         return comment
 
     def list_comments_for_post(
-        self, post_id: str, *, include_hidden: bool = False
+        self, post_id: str, *, include_hidden: bool = False, limit: int = 20, offset: int = 0
     ) -> list[Comment]:
         comments = [c for c in self.comments.values() if c.post_id == post_id]
         if not include_hidden:
             comments = [c for c in comments if not c.hidden]
-        return sorted(comments, key=lambda c: c.created_at)
+        comments = sorted(comments, key=lambda c: c.created_at)
+        return comments[offset : offset + limit]
 
     def get_comment(self, comment_id: str) -> Comment | None:
         return self.comments.get(comment_id)
@@ -207,6 +221,14 @@ class FakeFeedRepo:
 
     def like_count(self, post_id: str) -> int:
         return sum(1 for like in self.likes if like.post_id == post_id)
+
+    def like_counts_for_posts(self, post_ids: list[str]) -> dict[str, int]:
+        post_id_set = set(post_ids)
+        counts: dict[str, int] = {}
+        for like in self.likes:
+            if like.post_id in post_id_set:
+                counts[like.post_id] = counts.get(like.post_id, 0) + 1
+        return counts
 
 
 class FakeModerationRepo:

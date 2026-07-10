@@ -52,6 +52,14 @@ from app.services.errors import (
 )
 from app.services.marketplace_matching import AttributeMatchResult, rank_attribute_matches
 
+# Safety-valve cap on how many published Solutions
+# get_attribute_matches_for_rfp fetches as ranking candidates (issue #76)
+# — this is an internal ranking pass, not a UI page, so it must NOT be
+# capped at the request-level DEFAULT_PAGE_LIMIT the way GET
+# /marketplace/solutions is. See _VISIBILITY_FILTER_FETCH_CAP /
+# _CATEGORY_FILTER_FETCH_CAP for the same pattern elsewhere.
+_MATCHING_CANDIDATE_FETCH_CAP = 1000
+
 
 def create_organization(
     *, name: str, creator_user_id: str, org_repo: OrganizationRepoPort
@@ -200,6 +208,16 @@ def add_rfp_requirement(
     return rfp_repo.add_requirement(requirement)
 
 
+# Safety-valve cap on how many rows search_rfps fetches from the repo
+# before applying its Python-level invite-only visibility filter (issue
+# #76 — same reasoning as SqlAlchemySolutionRepo.search's
+# _CATEGORY_FILTER_FETCH_CAP: the filter can't be pushed into the repo's
+# SQL, since it depends on caller-specific org membership, not just RFP
+# columns, so limit/offset is applied to the filtered list instead of the
+# raw query).
+_VISIBILITY_FILTER_FETCH_CAP = 1000
+
+
 def search_rfps(
     *,
     caller_user_id: str | None,
@@ -208,14 +226,29 @@ def search_rfps(
     resolution_mode: str | None,
     org_repo: OrganizationRepoPort,
     rfp_repo: RFPRepoPort,
+    limit: int = 20,
+    offset: int = 0,
 ) -> list[RFP]:
     """Search across both visibilities, then filters invite_only RFPs
     down to only those whose posting org the caller belongs to (build
     brief: "invite-only RFPs should not appear in a public unauthenticated
     list, only to members of the posting org for now"). An anonymous
-    caller (`caller_user_id is None`) never sees invite_only RFPs."""
+    caller (`caller_user_id is None`) never sees invite_only RFPs.
+
+    `limit`/`offset` are applied AFTER the invite-only filter, not to the
+    raw repo query — the visibility check depends on caller identity
+    (something the repo layer doesn't know), so it can't be pushed into
+    SQL. To keep pagination consistent with the filtered result (rather
+    than returning a short/inconsistent page), this fetches a bounded
+    superset from the repo, filters in Python, then paginates the
+    filtered list. See `SqlAlchemySolutionRepo.search`'s `category_tag`
+    handling for the same pattern applied to a different filter."""
     all_rfps = rfp_repo.search(
-        industry=industry, geography=geography, resolution_mode=resolution_mode
+        industry=industry,
+        geography=geography,
+        resolution_mode=resolution_mode,
+        limit=_VISIBILITY_FILTER_FETCH_CAP,
+        offset=0,
     )
 
     visible: list[RFP] = []
@@ -232,7 +265,7 @@ def search_rfps(
                 member_org_ids.add(rfp.organization_id)
         if rfp.organization_id in member_org_ids:
             visible.append(rfp)
-    return visible
+    return visible[offset : offset + limit]
 
 
 def rfp_visible_to_caller(
@@ -365,7 +398,15 @@ def get_attribute_matches_for_rfp(
         raise RFPNotFoundError(rfp_id)
 
     requirements = rfp_repo.list_requirements(rfp_id)
-    published_solutions = solution_repo.search(status=SolutionStatus.PUBLISHED.value)
+    # NOT paginated to the UI default (issue #76): this is an internal
+    # ranking pass that must consider every published Solution as a
+    # candidate, not a single page of them — capped only by
+    # _MATCHING_CANDIDATE_FETCH_CAP as a safety valve against an
+    # unbounded scan, same reasoning as the other Python-level-filter
+    # fetch caps in this module/`SqlAlchemySolutionRepo.search`.
+    published_solutions = solution_repo.search(
+        status=SolutionStatus.PUBLISHED.value, limit=_MATCHING_CANDIDATE_FETCH_CAP, offset=0
+    )
     candidates = [
         (solution, solution_repo.list_attributes(solution.id)) for solution in published_solutions
     ]

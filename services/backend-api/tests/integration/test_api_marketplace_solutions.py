@@ -166,3 +166,80 @@ def test_search_by_organization(client):
 def test_get_nonexistent_solution_is_404(client):
     resp = client.get("/marketplace/solutions/does-not-exist")
     assert resp.status_code == 404
+
+
+def test_search_solutions_default_limit_caps_at_20(client):
+    headers, _ = _signup_and_auth_headers(client, email="provider-many@example.com")
+    org_id = _create_org(client, headers, name="Provider Org Many")
+    for i in range(25):
+        client.post(
+            "/marketplace/solutions",
+            json=_solution_payload(org_id, title=f"Solution {i}"),
+            headers=headers,
+        )
+
+    resp = client.get("/marketplace/solutions")
+    assert resp.status_code == 200
+    assert len(resp.json()) == 20
+
+
+def test_search_solutions_limit_and_offset_page_through_results(client):
+    headers, _ = _signup_and_auth_headers(client, email="provider-page@example.com")
+    org_id = _create_org(client, headers, name="Provider Org Page")
+    for i in range(5):
+        client.post(
+            "/marketplace/solutions",
+            json=_solution_payload(org_id, title=f"PageSolution {i}"),
+            headers=headers,
+        )
+
+    page1 = client.get("/marketplace/solutions", params={"limit": 2, "offset": 0}).json()
+    page2 = client.get("/marketplace/solutions", params={"limit": 2, "offset": 2}).json()
+
+    assert [s["title"] for s in page1] == ["PageSolution 4", "PageSolution 3"]
+    assert [s["title"] for s in page2] == ["PageSolution 2", "PageSolution 1"]
+    assert not set(s["id"] for s in page1) & set(s["id"] for s in page2)
+
+
+def test_search_solutions_limit_is_capped_at_100(client):
+    resp = client.get("/marketplace/solutions", params={"limit": 500})
+    assert resp.status_code == 422
+
+
+def test_search_solutions_category_tag_pagination_is_consistent(client):
+    """category_tag filtering happens in Python (JSON column, no
+    cross-DB containment operator — see SqlAlchemySolutionRepo.search),
+    so this proves limit/offset still behave correctly against the
+    FILTERED set, not the raw unfiltered query — i.e. a page never comes
+    back short because non-matching rows consumed the SQL-level window."""
+    headers, _ = _signup_and_auth_headers(client, email="provider-tagpage@example.com")
+    org_id = _create_org(client, headers, name="Provider Org TagPage")
+
+    # Interleave matching and non-matching solutions so a naive
+    # SQL-first-then-filter approach would produce a short/wrong page.
+    for i in range(6):
+        tag = "logistics" if i % 2 == 0 else "unrelated"
+        client.post(
+            "/marketplace/solutions",
+            json=_solution_payload(org_id, title=f"Tagged {i}", categoryTags=[tag]),
+            headers=headers,
+        )
+
+    resp_all = client.get("/marketplace/solutions", params={"categoryTag": "logistics", "limit": 10})
+    assert resp_all.status_code == 200
+    all_matches = resp_all.json()
+    assert len(all_matches) == 3
+    assert all("logistics" in s["categoryTags"] for s in all_matches)
+
+    page1 = client.get(
+        "/marketplace/solutions", params={"categoryTag": "logistics", "limit": 2, "offset": 0}
+    ).json()
+    page2 = client.get(
+        "/marketplace/solutions", params={"categoryTag": "logistics", "limit": 2, "offset": 2}
+    ).json()
+
+    assert len(page1) == 2
+    assert len(page2) == 1
+    assert not set(s["id"] for s in page1) & set(s["id"] for s in page2)
+    combined_ids = {s["id"] for s in page1} | {s["id"] for s in page2}
+    assert combined_ids == {s["id"] for s in all_matches}
