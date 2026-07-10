@@ -6,12 +6,16 @@ providers on the Marketplace — deliberately NOT the same as a civic
 model"). A `User` acts on an Organization's behalf via
 `OrganizationMembership` when posting RFPs or publishing Solutions.
 
-`rfp_free_quota_used` / `rfp_free_quota_limit` / `billing_status` exist
-as plain columns only for this phase — no quota-enforcement or paywall
-logic is wired up yet (that's a later phase per the build brief's
-explicit non-goals). `billing_status` is a plain string column (not a DB
-enum) for the same "iteration speed over DB-level strictness" reasoning
-already used for `Problem.tier` (see `app/models/problem.py`).
+`rfp_free_quota_used` is incremented by `app.services.marketplace_service
+.create_rfp` on every successful RFP creation (issue #71); crossing
+`rfp_free_quota_limit` is what flips the created `RFP.is_billable` to
+True and logs a `BillingEvent` (see `app/models/marketplace/billing.py`).
+No actual payment processing exists yet — this only tracks usage/quota
+state cleanly (CLAUDE.md "Monetization": "this phase only needs the
+quota tracking and the paywall gate to exist cleanly"). `billing_status`
+is a plain string column (not a DB enum) for the same "iteration speed
+over DB-level strictness" reasoning already used for `Problem.tier` (see
+`app/models/problem.py`) — nothing sets it to anything but `active` yet.
 """
 
 import enum

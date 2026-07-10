@@ -7,12 +7,16 @@ requirements, resolved either by promotion into a civic `Problem`
 Marketplace Architecture" -> "Two resolution modes per RFP" and "Domain
 model".
 
-`promoted_problem_id` and `is_billable` are columns only for this phase:
+`promoted_problem_id` and `is_billable`:
 - `promoted_problem_id`: the actual promote-to-community flow is issue
   #70, not built here — just the nullable FK column.
-- `is_billable`: real billing gating is a later phase (see
-  `app/models/marketplace/organization.py` docstring) — always False for
-  now, no code path sets it True yet.
+- `is_billable`: set True by `app.services.marketplace_service.create_rfp`
+  (issue #71) when the posting Organization's `rfp_free_quota_used`
+  (post-increment) exceeds `rfp_free_quota_limit` — see
+  `app/models/marketplace/organization.py` docstring and
+  `app/models/marketplace/billing.py`. Real payment processing (charging
+  a card, invoicing) is still out of scope; this only flags the RFP as
+  billable and logs a `BillingEvent`.
 
 `resolution_mode`, `visibility`, and `status` are plain string columns
 (not DB enums), consistent with `Problem.tier`'s "iteration speed over

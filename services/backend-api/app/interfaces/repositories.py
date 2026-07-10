@@ -27,6 +27,7 @@ from typing import Protocol
 from app.models.checkpoint import CommitmentCheckpoint
 from app.models.commitment import Commitment
 from app.models.feed import Comment, FeedPost
+from app.models.marketplace.billing import BillingEvent
 from app.models.marketplace.organization import Organization, OrganizationMembership
 from app.models.marketplace.rfp import RFP, RFPRequirement
 from app.models.marketplace.solution import Solution, SolutionAttribute
@@ -193,6 +194,13 @@ class OrganizationRepoPort(Protocol):
         backs `GET /marketplace/organizations/mine`."""
         ...
 
+    def increment_rfp_quota_used(self, organization_id: str) -> Organization:
+        """Atomically bumps `rfp_free_quota_used` by 1 and returns the
+        updated Organization row — the ONLY mutation path for that
+        counter (issue #71 paywall gate). Called once per successful RFP
+        creation, from `app.services.marketplace_service.create_rfp`."""
+        ...
+
 
 class RFPRepoPort(Protocol):
     def get_by_id(self, rfp_id: str) -> RFP | None: ...
@@ -234,6 +242,19 @@ class SolutionRepoPort(Protocol):
     def list_attributes(self, solution_id: str) -> list[SolutionAttribute]: ...
 
 
+class BillingEventRepoPort(Protocol):
+    def add(self, event: BillingEvent) -> BillingEvent:
+        """Insert-only — never update or delete (CLAUDE.md immutability
+        rule for audit trails), matching CheckpointRepoPort.add /
+        ModerationRepoPort.add."""
+        ...
+
+    def list_for_organization(self, organization_id: str) -> list[BillingEvent]:
+        """Newest first — backs
+        `GET /marketplace/organizations/{id}/billing-events`."""
+        ...
+
+
 __all__ = [
     "UserRepoPort",
     "ProblemRepoPort",
@@ -244,4 +265,5 @@ __all__ = [
     "OrganizationRepoPort",
     "RFPRepoPort",
     "SolutionRepoPort",
+    "BillingEventRepoPort",
 ]

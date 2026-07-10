@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 from app.models.checkpoint import CheckpointEventType, CommitmentCheckpoint
 from app.models.commitment import Commitment, CommitmentStatus
 from app.models.feed import Comment, FeedPost, PostLike
+from app.models.marketplace.billing import BillingEvent
 from app.models.marketplace.organization import Organization, OrganizationMembership
 from app.models.marketplace.rfp import RFP, RFPRequirement
 from app.models.marketplace.solution import Solution, SolutionAttribute
@@ -356,6 +357,21 @@ class SqlAlchemyOrganizationRepo:
         )
         return list(self.session.execute(stmt).scalars().all())
 
+    def increment_rfp_quota_used(self, organization_id: str) -> Organization:
+        # session.get + attribute mutation, same read-modify-commit
+        # pattern as SqlAlchemyUserRepo.update_reputation — no
+        # SELECT ... FOR UPDATE here since this is a single-process
+        # solo-dev deployment (see app/core/rate_limit.py's identical
+        # reasoning for skipping cross-replica coordination at this
+        # stage); revisit if backend-api is ever horizontally scaled.
+        organization = self.session.get(Organization, organization_id)
+        if organization is None:
+            raise ValueError(f"Organization {organization_id} not found.")
+        organization.rfp_free_quota_used += 1
+        self.session.commit()
+        self.session.refresh(organization)
+        return organization
+
 
 class SqlAlchemyRFPRepo:
     def __init__(self, session: Session):
@@ -448,5 +464,24 @@ class SqlAlchemySolutionRepo:
             select(SolutionAttribute)
             .where(SolutionAttribute.solution_id == solution_id)
             .order_by(SolutionAttribute.created_at.asc())
+        )
+        return list(self.session.execute(stmt).scalars().all())
+
+
+class SqlAlchemyBillingEventRepo:
+    def __init__(self, session: Session):
+        self.session = session
+
+    def add(self, event: BillingEvent) -> BillingEvent:
+        self.session.add(event)
+        self.session.commit()
+        self.session.refresh(event)
+        return event
+
+    def list_for_organization(self, organization_id: str) -> list[BillingEvent]:
+        stmt = (
+            select(BillingEvent)
+            .where(BillingEvent.organization_id == organization_id)
+            .order_by(BillingEvent.occurred_at.desc())
         )
         return list(self.session.execute(stmt).scalars().all())

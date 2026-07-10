@@ -7,10 +7,12 @@ imports for a product surface that's architecturally independent (see
 CLAUDE.md "Solution Marketplace Architecture").
 """
 
+from app.models.marketplace.billing import BillingEvent
 from app.models.marketplace.organization import Organization, OrganizationMembership
 from app.models.marketplace.rfp import RFP, RFPRequirement
 from app.models.marketplace.solution import Solution, SolutionAttribute
 from app.schemas_marketplace import (
+    BillingEventOut,
     OrganizationMembershipOut,
     OrganizationOut,
     RFPOut,
@@ -92,4 +94,15 @@ def solution_attribute_to_out(attribute: SolutionAttribute) -> SolutionAttribute
         attribute_key=attribute.attribute_key,
         attribute_value=attribute.attribute_value,
         created_at=attribute.created_at,
+    )
+
+
+def billing_event_to_out(event: BillingEvent) -> BillingEventOut:
+    return BillingEventOut(
+        id=event.id,
+        organization_id=event.organization_id,
+        rfp_id=event.rfp_id,
+        event_type=event.event_type,
+        amount=event.amount,
+        occurred_at=event.occurred_at,
     )

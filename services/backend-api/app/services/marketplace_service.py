@@ -9,14 +9,26 @@ FastAPI dependency so they're importable/testable from `tests/unit/`
 without a database. Routers (`app/routers/marketplace/*.py`) translate
 these exceptions into HTTP responses.
 
-Explicit non-goals enforced here (per the build brief): no quota/billing
-check anywhere in `create_solution` (publishing is always free — CLAUDE.md
-"Monetization"), and no quota/billing check in `create_rfp` either (RFP
-free-quota *tracking* exists as columns on `Organization` but the
-paywall gate itself is a later phase, not built in this pass).
+Explicit non-goal enforced here (per the build brief): no quota/billing
+check EVER in `create_solution` — publishing is always free (CLAUDE.md
+"Monetization"). `create_rfp`, by contrast, now DOES track free-quota
+usage and flip the paywall flag (issue #71): RFP posting is never
+*blocked* here (no payment processor exists to actually charge anyone
+yet — CLAUDE.md "this phase only needs the quota tracking and the
+paywall gate to exist cleanly"), but every successful creation
+increments `Organization.rfp_free_quota_used` by 1 and logs one
+`BillingEvent`, tagged `billable_rfp_posted` once the post-increment
+count exceeds `rfp_free_quota_limit` (then also setting the new RFP's
+`is_billable = True`), otherwise `free_rfp_posted`.
 """
 
-from app.interfaces.repositories import OrganizationRepoPort, RFPRepoPort, SolutionRepoPort
+from app.interfaces.repositories import (
+    BillingEventRepoPort,
+    OrganizationRepoPort,
+    RFPRepoPort,
+    SolutionRepoPort,
+)
+from app.models.marketplace.billing import BillingEvent, BillingEventType
 from app.models.marketplace.organization import (
     Organization,
     OrganizationMembership,
@@ -109,7 +121,14 @@ def create_rfp(
     visibility: str,
     org_repo: OrganizationRepoPort,
     rfp_repo: RFPRepoPort,
+    billing_repo: BillingEventRepoPort,
 ) -> RFP:
+    """Creates the RFP, then — unconditionally, on every successful
+    creation — increments the posting Organization's free-quota counter
+    and logs exactly one BillingEvent (issue #71). Never blocks creation:
+    no payment processor exists to actually charge anyone yet, so
+    crossing the quota only flips `RFP.is_billable` and logs the event;
+    it does not raise. See module docstring."""
     require_org_member(organization_id=organization_id, user_id=caller_user_id, org_repo=org_repo)
 
     rfp = RFP(
@@ -124,7 +143,27 @@ def create_rfp(
         resolution_mode=resolution_mode,
         visibility=visibility,
     )
-    return rfp_repo.add(rfp)
+    rfp = rfp_repo.add(rfp)
+
+    organization = org_repo.increment_rfp_quota_used(organization_id)
+
+    if organization.rfp_free_quota_used > organization.rfp_free_quota_limit:
+        rfp.is_billable = True
+        rfp = rfp_repo.add(rfp)
+        event_type = BillingEventType.BILLABLE_RFP_POSTED.value
+    else:
+        event_type = BillingEventType.FREE_RFP_POSTED.value
+
+    billing_repo.add(
+        BillingEvent(
+            organization_id=organization_id,
+            rfp_id=rfp.id,
+            event_type=event_type,
+            amount=None,
+        )
+    )
+
+    return rfp
 
 
 def add_rfp_requirement(
@@ -210,6 +249,32 @@ def create_solution(
         category_tags=category_tags,
     )
     return solution_repo.add(solution)
+
+
+def list_billing_events(
+    *,
+    organization_id: str,
+    caller_user_id: str,
+    org_repo: OrganizationRepoPort,
+    billing_repo: BillingEventRepoPort,
+) -> list[BillingEvent]:
+    """Admin-only, mirroring `add_member`'s gate (CLAUDE.md-adjacent build
+    brief: "admin-member-of-org only, mirroring whatever auth gate
+    organizations.py already uses for admin-only actions"). Billing
+    events are the organization's usage/quota ledger — member-level
+    visibility isn't warranted here the way plain membership is enough
+    for RFP/Solution posting."""
+    if org_repo.get_by_id(organization_id) is None:
+        raise OrganizationNotFoundError(organization_id)
+
+    caller_membership = org_repo.get_membership(organization_id, caller_user_id)
+    if (
+        caller_membership is None
+        or caller_membership.role != OrganizationMembershipRole.ADMIN.value
+    ):
+        raise NotOrgAdminError(organization_id)
+
+    return billing_repo.list_for_organization(organization_id)
 
 
 def add_solution_attribute(

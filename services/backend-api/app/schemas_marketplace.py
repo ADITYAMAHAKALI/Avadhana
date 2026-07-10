@@ -27,6 +27,7 @@ ResolutionMode = Literal["community", "marketplace", "both"]
 RFPVisibility = Literal["public", "invite_only"]
 RFPStatus = Literal["draft", "open", "closed"]
 SolutionStatus = Literal["draft", "published"]
+BillingEventType = Literal["free_rfp_posted", "billable_rfp_posted"]
 
 
 # --- Organizations ----------------------------------------------------
@@ -144,6 +145,18 @@ class SolutionOut(CamelModel):
     category_tags: list[str]
     status: SolutionStatus
     created_at: datetime
+
+
+# --- Billing events (issue #71) -------------------------------------------
+
+
+class BillingEventOut(CamelModel):
+    id: str
+    organization_id: str
+    rfp_id: str | None
+    event_type: BillingEventType
+    amount: float | None
+    occurred_at: datetime
 
 
 # --- Error payloads (documented shapes, transported via HTTPException

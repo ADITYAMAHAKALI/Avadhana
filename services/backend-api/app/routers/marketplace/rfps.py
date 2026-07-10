@@ -19,7 +19,11 @@ from sqlalchemy.orm import Session
 from app.core.auth_dependencies import get_current_user
 from app.core.security import InvalidTokenError, decode_access_token
 from app.db.session import get_session
-from app.impl.repositories import SqlAlchemyOrganizationRepo, SqlAlchemyRFPRepo
+from app.impl.repositories import (
+    SqlAlchemyBillingEventRepo,
+    SqlAlchemyOrganizationRepo,
+    SqlAlchemyRFPRepo,
+)
 from app.models.user import User
 from app.schemas_marketplace import (
     RFPCreateRequest,
@@ -59,6 +63,7 @@ def create_rfp_route(
 ) -> RFPOut:
     org_repo = SqlAlchemyOrganizationRepo(session)
     rfp_repo = SqlAlchemyRFPRepo(session)
+    billing_repo = SqlAlchemyBillingEventRepo(session)
     try:
         rfp = create_rfp(
             organization_id=body.organization_id,
@@ -74,6 +79,7 @@ def create_rfp_route(
             visibility=body.visibility,
             org_repo=org_repo,
             rfp_repo=rfp_repo,
+            billing_repo=billing_repo,
         )
     except OrganizationNotFoundError as exc:
         raise HTTPException(

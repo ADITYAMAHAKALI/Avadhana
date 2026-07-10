@@ -11,6 +11,7 @@ from app.db.base import Base
 from app.models.checkpoint import CommitmentCheckpoint
 from app.models.commitment import Commitment
 from app.models.feed import Comment, FeedPost, PostLike
+from app.models.marketplace.billing import BillingEvent
 from app.models.marketplace.organization import Organization, OrganizationMembership
 from app.models.marketplace.rfp import RFP, RFPRequirement
 from app.models.marketplace.solution import Solution, SolutionAttribute
@@ -34,4 +35,5 @@ __all__ = [
     "RFPRequirement",
     "Solution",
     "SolutionAttribute",
+    "BillingEvent",
 ]
