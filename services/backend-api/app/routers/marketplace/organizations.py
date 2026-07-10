@@ -40,8 +40,13 @@ from app.schemas_marketplace import (
     OrganizationMembershipOut,
     OrganizationOut,
 )
-from app.services.errors import NotOrgAdminError, OrganizationNotFoundError
-from app.services.marketplace_service import add_member, create_organization, list_billing_events
+from app.services.errors import NotOrgAdminError, NotOrgMemberError, OrganizationNotFoundError
+from app.services.marketplace_service import (
+    add_member,
+    create_organization,
+    list_billing_events,
+    require_org_member,
+)
 from app.services.presenters_marketplace import (
     billing_event_to_out,
     membership_to_out,
@@ -82,16 +87,26 @@ def get_organization_route(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ) -> OrganizationOut:
+    """Membership-gated, same shielding convention as invite-only RFPs
+    (`rfps.py`): a non-member gets the same 404 an actually-missing
+    Organization would, rather than a 403 that would confirm the
+    Organization exists. Fixes GitHub issue #84 (IDOR — this endpoint
+    previously returned any Organization's billing status/quota to any
+    authenticated user regardless of membership)."""
     org_repo = SqlAlchemyOrganizationRepo(session)
-    organization = org_repo.get_by_id(organization_id)
-    if organization is None:
+    try:
+        require_org_member(
+            organization_id=organization_id, user_id=current_user.id, org_repo=org_repo
+        )
+    except (OrganizationNotFoundError, NotOrgMemberError) as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={
                 "error": "ORGANIZATION_NOT_FOUND",
                 "message": f"No organization with id {organization_id}.",
             },
-        )
+        ) from exc
+    organization = org_repo.get_by_id(organization_id)
     return organization_to_out(organization)
 
 
@@ -135,15 +150,23 @@ def list_members_route(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ) -> list[OrganizationMembershipOut]:
+    """Membership-gated — see `get_organization_route`'s docstring.
+    Fixes GitHub issue #84 (IDOR — this endpoint previously returned any
+    Organization's full member roster, user IDs + roles, to any
+    authenticated user regardless of membership)."""
     org_repo = SqlAlchemyOrganizationRepo(session)
-    if org_repo.get_by_id(organization_id) is None:
+    try:
+        require_org_member(
+            organization_id=organization_id, user_id=current_user.id, org_repo=org_repo
+        )
+    except (OrganizationNotFoundError, NotOrgMemberError) as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={
                 "error": "ORGANIZATION_NOT_FOUND",
                 "message": f"No organization with id {organization_id}.",
             },
-        )
+        ) from exc
     memberships = org_repo.list_memberships_for_organization(organization_id)
     return [membership_to_out(m) for m in memberships]
 

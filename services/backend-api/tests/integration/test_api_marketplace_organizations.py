@@ -116,3 +116,28 @@ def test_get_nonexistent_organization_is_404(client):
     headers, _ = _signup_and_auth_headers(client, email="lookup@example.com")
     resp = client.get("/marketplace/organizations/does-not-exist", headers=headers)
     assert resp.status_code == 404
+
+
+def test_non_member_cannot_get_organization_detail(client):
+    """Regression test for issue #84 (IDOR): a real, existing
+    Organization must be invisible to a user who isn't a member of it —
+    same 404 as a nonexistent one, so existence isn't leaked either."""
+    owner_headers, _ = _signup_and_auth_headers(client, email="org-owner@example.com")
+    org_id = _create_org(client, owner_headers, name="Private Co")
+
+    outsider_headers, _ = _signup_and_auth_headers(client, email="outsider@example.com")
+    resp = client.get(f"/marketplace/organizations/{org_id}", headers=outsider_headers)
+    assert resp.status_code == 404
+    assert resp.json()["detail"]["error"] == "ORGANIZATION_NOT_FOUND"
+
+
+def test_non_member_cannot_list_organization_members(client):
+    """Regression test for issue #84 (IDOR): the member roster (names,
+    roles) must not be readable by a non-member."""
+    owner_headers, _ = _signup_and_auth_headers(client, email="org-owner2@example.com")
+    org_id = _create_org(client, owner_headers, name="Private Co 2")
+
+    outsider_headers, _ = _signup_and_auth_headers(client, email="outsider2@example.com")
+    resp = client.get(f"/marketplace/organizations/{org_id}/members", headers=outsider_headers)
+    assert resp.status_code == 404
+    assert resp.json()["detail"]["error"] == "ORGANIZATION_NOT_FOUND"
