@@ -28,10 +28,35 @@ spec:
       labels:
         app: ai-coordinator-worker
     spec:
+      # Pod-level securityContext (issue #85): runAsUser/runAsGroup 1000
+      # match the `appuser` uid/gid 1000 created in
+      # services/ai-coordinator-worker/Containerfile's USER directive —
+      # same UID/GID scheme as backend-api and sarvam-mock for
+      # consistency across the fleet.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
       containers:
         - name: ai-coordinator-worker
           image: avadhana/ai-coordinator-worker:dev
           imagePullPolicy: IfNotPresent
+          # Container-level hardening (issue #85). readOnlyRootFilesystem:
+          # true — verified locally (podman run --read-only, worker
+          # connects to Redis and starts listening with no fs writes);
+          # RQ's worker loop and this codebase's job handlers don't
+          # write to disk, only to Redis/stdout. /tmp is still mounted
+          # as an emptyDir as cheap insurance for any dependency that
+          # expects scratch space.
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           envFrom:
             - configMapRef:
                 name: avadhana-ai-coordinator-worker-config
@@ -55,3 +80,9 @@ spec:
           # registration check) alongside the real SARVAM job types
           # (issues #19-27). Until then, `kubectl logs` / `rq info` against
           # Redis are the way to check worker health (see README).
+      volumes:
+        # Backs the /tmp mount above so the container can run with
+        # readOnlyRootFilesystem: true (issue #85) while still having
+        # scratch space if any dependency needs it.
+        - name: tmp
+          emptyDir: {}

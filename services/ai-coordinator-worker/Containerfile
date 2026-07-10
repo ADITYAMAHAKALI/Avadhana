@@ -9,8 +9,18 @@ RUN pip install --no-cache-dir .
 
 # Copy worker code (composition root + interface/impl packages)
 COPY worker.py ./
+COPY sarvam_config.py ./
 COPY interfaces/ ./interfaces/
 COPY impl/ ./impl/
+
+# Run as a dedicated unprivileged user rather than the image default
+# (root) — see issue #85. Same UID/GID 1000 scheme as the other three
+# custom-built service images (kept consistent across the fleet); see
+# services/backend-api/Containerfile for the fuller rationale comment.
+RUN groupadd --gid 1000 appuser \
+    && useradd --uid 1000 --gid appuser --create-home --shell /usr/sbin/nologin appuser \
+    && chown -R appuser:appuser /app
+USER appuser
 
 # No exposed port — this is a background job-queue worker, not an HTTP service.
 CMD ["python", "worker.py"]

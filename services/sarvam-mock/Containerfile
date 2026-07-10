@@ -13,6 +13,15 @@ RUN pip install --no-cache-dir "fastapi>=0.115,<1.0" "uvicorn[standard]>=0.30,<1
 # Copy application code
 COPY app/ ./app/
 
+# Run as a dedicated unprivileged user rather than the image default
+# (root) — see issue #85. Same UID/GID 1000 scheme as the other three
+# custom-built service images (kept consistent across the fleet); see
+# services/backend-api/Containerfile for the fuller rationale comment.
+RUN groupadd --gid 1000 appuser \
+    && useradd --uid 1000 --gid appuser --create-home --shell /usr/sbin/nologin appuser \
+    && chown -R appuser:appuser /app
+USER appuser
+
 EXPOSE 8080
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]

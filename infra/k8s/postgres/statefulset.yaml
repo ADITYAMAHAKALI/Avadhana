@@ -19,9 +19,39 @@ spec:
       labels:
         app: postgres
     spec:
+      # Pod-level securityContext (issue #85): the postgres:16-alpine
+      # image already ships a dedicated `postgres` user — verified
+      # locally (`podman run --rm postgres:16-alpine getent passwd
+      # postgres`) as uid=70 gid=70 — so no custom user is created
+      # here, just pinned explicitly. fsGroup 70 ensures the
+      # PVC-backed postgres-data volume (and the tmp/run emptyDirs
+      # below) are group-writable by that uid on first mount, since
+      # k8s-provisioned volumes default to root ownership otherwise.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 70
+        runAsGroup: 70
+        fsGroup: 70
       containers:
         - name: postgres
           image: postgres:16-alpine
+          # Container-level hardening (issue #85). readOnlyRootFilesystem
+          # is intentionally NOT set here: postgres writes its config
+          # (postgresql.conf, pg_hba.conf, etc., copied into PGDATA on
+          # initdb) and expects a handful of other paths (its own /tmp
+          # usage, /var/run/postgresql for the Unix socket) to be
+          # writable. Verified locally that /tmp and
+          # /var/run/postgresql need to be writable even with the data
+          # dir on a separate volume — provided here as emptyDir mounts
+          # so the rest of the image filesystem could still be
+          # tightened later, but leaving the root fs itself writable
+          # for now keeps this change minimal and avoids chasing every
+          # path postgres's own tooling (initdb, WAL, stats temp files)
+          # might touch outside PGDATA.
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           ports:
             - containerPort: 5432
               name: postgres
@@ -47,6 +77,14 @@ spec:
           volumeMounts:
             - name: postgres-data
               mountPath: /var/lib/postgresql/data
+            # Writable Unix-socket dir for the postgres client tools
+            # (pg_isready in the probes below, and any in-cluster psql)
+            # — needed alongside readOnlyRootFilesystem being skipped
+            # for this container; kept as an explicit emptyDir anyway
+            # since it's small, cheap insurance if a stricter
+            # filesystem policy is added later.
+            - name: postgres-run
+              mountPath: /var/run/postgresql
           readinessProbe:
             exec:
               command: ["pg_isready", "-U", "$(POSTGRES_USER)", "-d", "$(POSTGRES_DB)"]
@@ -57,6 +95,9 @@ spec:
               command: ["pg_isready", "-U", "$(POSTGRES_USER)", "-d", "$(POSTGRES_DB)"]
             initialDelaySeconds: 15
             periodSeconds: 10
+      volumes:
+        - name: postgres-run
+          emptyDir: {}
   volumeClaimTemplates:
     - metadata:
         name: postgres-data
