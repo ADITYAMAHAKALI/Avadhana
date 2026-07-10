@@ -111,20 +111,30 @@ export function CommitModal({ problem, onClose, onCommitted }: CommitModalProps)
               </div>
               <div className={styles.roleDesc}>On-ground execution — shaped by what the problem actually needs.</div>
               {role === 'actor' && (
-                <div className={styles.specRow}>
-                  {SPECIALIZATIONS.map((name) => (
-                    <span
-                      key={name}
-                      className={specChipClass(name)}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSpecialization(name);
-                      }}
-                    >
-                      {name}
-                    </span>
-                  ))}
-                </div>
+                <>
+                  <div className={styles.specRow}>
+                    {SPECIALIZATIONS.map((name) => (
+                      <span
+                        key={name}
+                        className={specChipClass(name)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSpecialization(name);
+                        }}
+                      >
+                        {name}
+                      </span>
+                    ))}
+                  </div>
+                  {/* Draft disclaimer scaffolding for GitHub issue #78 — NOT reviewed by a
+                      lawyer. See docs/legal-draft-DO-NOT-USE-WITHOUT-REVIEW.md. This line
+                      exists so the eventual real disclaimer has a place to plug into; it is
+                      not itself a liability shield. */}
+                  <div className={styles.actorDisclaimer}>
+                    ⚠ Actions you take as an Actor (RTI filings, organizing, legal action) are
+                    your own. Avadhana provides no legal backing or representation.
+                  </div>
+                </>
               )}
             </div>
 
@@ -201,6 +211,7 @@ export function CommitModal({ problem, onClose, onCommitted }: CommitModalProps)
           <label className={styles.ackRow}>
             <span className={styles.ackCheck}>✓</span>
             I understand I cannot free this slot for 90 days.
+            {role === 'actor' && ' Actions I take as an Actor are my own — Avadhana provides no legal backing or representation.'}
           </label>
 
           {commitError && <div className={styles.errorBanner}>{commitError}</div>}

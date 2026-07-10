@@ -197,6 +197,12 @@ export function NewRFPPage() {
           Posting an RFP never spends a focus slot and is never locked for 90 days — the Marketplace is independent of
           the civic commitment mechanic. First 100 RFPs per Organization are free.
         </div>
+        <div className={styles.finePrint}>
+          Avadhana is not a broker, guarantor, or party to any procurement relationship formed between your
+          Organization and a matched Solution provider — the matching engine surfaces a ranked shortlist; you engage
+          providers directly. (Draft disclaimer, pending legal review — see
+          docs/legal-draft-DO-NOT-USE-WITHOUT-REVIEW.md, GitHub issue #78.)
+        </div>
       </form>
     </div>
   );
