@@ -15,6 +15,7 @@ from app.models.commitment import Commitment
 from app.models.feed import Comment, FeedPost
 from app.models.moderation import ModerationOverrideEvent
 from app.models.problem import Problem
+from app.models.resolution_objection import ResolutionObjection
 from app.models.user import User
 from app.schemas import (
     CheckpointOut,
@@ -24,8 +25,10 @@ from app.schemas import (
     FeedPostOut,
     ModerationOverrideEventOut,
     ProblemOut,
+    ResolutionObjectionOut,
     UserOut,
 )
+from app.services.problem_lifecycle_service import ResolutionStatus
 
 CYCLE_LENGTH_DAYS = 90
 
@@ -42,7 +45,25 @@ def user_to_out(user: User) -> UserOut:
     )
 
 
-def problem_to_out(problem: Problem, role_counts: dict[str, int]) -> ProblemOut:
+def problem_to_out(
+    problem: Problem,
+    role_counts: dict[str, int],
+    resolution_status: ResolutionStatus | None = None,
+) -> ProblemOut:
+    # `resolution_status` is optional so every existing call site (list/
+    # detail endpoints, tests) doesn't have to be touched in lockstep;
+    # a freshly-created problem (no commitments yet) has an obvious
+    # default of "open" with nothing claimed, matching what
+    # `compute_resolution_status` would return anyway for zero members.
+    status = resolution_status or ResolutionStatus(
+        status="open",
+        resolved_count=0,
+        total_committed=0,
+        threshold=None,
+        window_start=None,
+        window_ends_at=None,
+        objection_count=0,
+    )
     return ProblemOut(
         id=problem.id,
         title=problem.title,
@@ -54,6 +75,12 @@ def problem_to_out(problem: Problem, role_counts: dict[str, int]) -> ProblemOut:
         thinker_count=role_counts.get("thinker", 0),
         actor_count=role_counts.get("actor", 0),
         backer_count=role_counts.get("backer", 0),
+        resolution_status=status.status,
+        resolved_count=status.resolved_count,
+        total_committed=status.total_committed,
+        resolution_threshold=status.threshold,
+        resolution_window_ends_at=status.window_ends_at,
+        objection_count=status.objection_count,
     )
 
 
@@ -141,4 +168,13 @@ def moderation_event_to_out(event: ModerationOverrideEvent) -> ModerationOverrid
         performed_by=event.performed_by,
         reason=event.reason,
         occurred_at=event.occurred_at,
+    )
+
+
+def resolution_objection_to_out(objection: ResolutionObjection) -> ResolutionObjectionOut:
+    return ResolutionObjectionOut(
+        id=objection.id,
+        problem_id=objection.problem_id,
+        objecting_user_id=objection.objecting_user_id,
+        raised_at=objection.raised_at,
     )

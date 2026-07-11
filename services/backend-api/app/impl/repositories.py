@@ -26,6 +26,7 @@ from app.models.marketplace.solution import Solution, SolutionAttribute
 from app.interfaces.repositories import DEFAULT_PAGE_LIMIT
 from app.models.moderation import ModerationOverrideEvent, ModerationTargetType
 from app.models.problem import Problem
+from app.models.resolution_objection import ResolutionObjection
 from app.models.user import User
 
 # Safety-valve cap on how many rows SqlAlchemySolutionRepo.search fetches
@@ -188,6 +189,20 @@ class SqlAlchemyCommitmentRepo:
             result.setdefault(problem_id, {})[role] = count
         return result
 
+    def list_active_for_problem(self, problem_id: str) -> list[Commitment]:
+        stmt = select(Commitment).where(
+            Commitment.problem_id == problem_id,
+            Commitment.status == CommitmentStatus.ACTIVE.value,
+        )
+        return list(self.session.execute(stmt).scalars().all())
+
+    def list_non_abandoned_for_problem(self, problem_id: str) -> list[Commitment]:
+        stmt = select(Commitment).where(
+            Commitment.problem_id == problem_id,
+            Commitment.status != CommitmentStatus.ABANDONED.value,
+        )
+        return list(self.session.execute(stmt).scalars().all())
+
 
 class SqlAlchemyCheckpointRepo:
     def __init__(self, session: Session):
@@ -213,6 +228,27 @@ class SqlAlchemyCheckpointRepo:
             CommitmentCheckpoint.event_type != CheckpointEventType.CREATED.value,
         )
         return self.session.execute(stmt).scalar_one() > 0
+
+    def list_latest_for_commitments(
+        self, commitment_ids: list[str]
+    ) -> dict[str, CommitmentCheckpoint]:
+        if not commitment_ids:
+            return {}
+        # Fetch every checkpoint row for the given commitments ordered
+        # oldest-first, then keep the last one seen per commitment_id in
+        # Python — simpler and portable across SQLite (tests) and
+        # Postgres (prod) than a window-function "latest per group"
+        # query, and this table is small per commitment (a handful of
+        # lifecycle events at most).
+        stmt = (
+            select(CommitmentCheckpoint)
+            .where(CommitmentCheckpoint.commitment_id.in_(commitment_ids))
+            .order_by(CommitmentCheckpoint.occurred_at.asc())
+        )
+        latest: dict[str, CommitmentCheckpoint] = {}
+        for checkpoint in self.session.execute(stmt).scalars().all():
+            latest[checkpoint.commitment_id] = checkpoint
+        return latest
 
 
 class SqlAlchemyFeedRepo:
@@ -309,6 +345,25 @@ class SqlAlchemyFeedRepo:
         )
         rows = self.session.execute(stmt).all()
         return {post_id: count for post_id, count in rows}
+
+
+class SqlAlchemyResolutionObjectionRepo:
+    def __init__(self, session: Session):
+        self.session = session
+
+    def add(self, objection: ResolutionObjection) -> ResolutionObjection:
+        self.session.add(objection)
+        self.session.commit()
+        self.session.refresh(objection)
+        return objection
+
+    def list_for_problem(self, problem_id: str) -> list[ResolutionObjection]:
+        stmt = (
+            select(ResolutionObjection)
+            .where(ResolutionObjection.problem_id == problem_id)
+            .order_by(ResolutionObjection.raised_at.asc())
+        )
+        return list(self.session.execute(stmt).scalars().all())
 
 
 class SqlAlchemyModerationRepo:

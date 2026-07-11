@@ -76,6 +76,32 @@ class NotCommittedError(Exception):
         )
 
 
+class NoActiveResolutionWindowError(Exception):
+    """Raised when an objection is attempted on a problem that has no
+    currently-open resolution window — either the resolved-claim
+    threshold was never met, or a prior window already closed (issue
+    #100). See app/services/problem_lifecycle_service.py."""
+
+    def __init__(self, problem_id: str):
+        self.problem_id = problem_id
+        super().__init__(
+            f"Problem {problem_id} has no active resolution window to object to."
+        )
+
+
+class AlreadyObjectedError(Exception):
+    """Raised when a committed member attempts a second objection within
+    the same resolution-claim episode (issue #100) — one objection per
+    user per episode, see app/models/resolution_objection.py."""
+
+    def __init__(self, problem_id: str):
+        self.problem_id = problem_id
+        super().__init__(
+            f"Caller has already objected during the current resolution "
+            f"window on problem {problem_id}."
+        )
+
+
 class ModerationTargetNotFoundError(Exception):
     """Raised when a hide/restore is attempted on a post/comment id that
     doesn't exist, or (for comments) doesn't belong to the given post, or

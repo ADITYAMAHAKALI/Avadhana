@@ -14,6 +14,7 @@ from app.models.commitment import Commitment, CommitmentStatus
 from app.models.feed import Comment, FeedPost, PostLike
 from app.models.moderation import ModerationOverrideEvent
 from app.models.problem import Problem
+from app.models.resolution_objection import ResolutionObjection
 from app.models.user import User
 
 
@@ -137,6 +138,20 @@ class FakeCommitmentRepo:
                 counts[c.role] = counts.get(c.role, 0) + 1
         return result
 
+    def list_active_for_problem(self, problem_id: str) -> list[Commitment]:
+        return [
+            c
+            for c in self.commitments.values()
+            if c.problem_id == problem_id and c.status == CommitmentStatus.ACTIVE.value
+        ]
+
+    def list_non_abandoned_for_problem(self, problem_id: str) -> list[Commitment]:
+        return [
+            c
+            for c in self.commitments.values()
+            if c.problem_id == problem_id and c.status != CommitmentStatus.ABANDONED.value
+        ]
+
 
 class FakeCheckpointRepo:
     def __init__(self):
@@ -153,6 +168,31 @@ class FakeCheckpointRepo:
         return any(
             c.commitment_id == commitment_id and c.event_type != CheckpointEventType.CREATED.value
             for c in self.checkpoints
+        )
+
+    def list_latest_for_commitments(
+        self, commitment_ids: list[str]
+    ) -> dict[str, CommitmentCheckpoint]:
+        commitment_id_set = set(commitment_ids)
+        latest: dict[str, CommitmentCheckpoint] = {}
+        for c in sorted(self.checkpoints, key=lambda c: c.occurred_at):
+            if c.commitment_id in commitment_id_set:
+                latest[c.commitment_id] = c
+        return latest
+
+
+class FakeResolutionObjectionRepo:
+    def __init__(self):
+        self.objections: list[ResolutionObjection] = []
+
+    def add(self, objection: ResolutionObjection) -> ResolutionObjection:
+        self.objections.append(objection)
+        return objection
+
+    def list_for_problem(self, problem_id: str) -> list[ResolutionObjection]:
+        return sorted(
+            (o for o in self.objections if o.problem_id == problem_id),
+            key=lambda o: o.raised_at,
         )
 
 

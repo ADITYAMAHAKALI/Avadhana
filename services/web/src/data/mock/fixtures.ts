@@ -36,6 +36,12 @@ export const PROBLEMS: Problem[] = [
     actorCount: 2,
     backerCount: 1,
     followingCount: 61,
+    resolutionStatus: 'open',
+    resolvedCount: 0,
+    totalCommitted: 8,
+    resolutionThreshold: 2,
+    resolutionWindowEndsAt: null,
+    objectionCount: 0,
   },
   {
     id: 'p-crossing',
@@ -50,6 +56,14 @@ export const PROBLEMS: Problem[] = [
     actorCount: 4,
     backerCount: 2,
     followingCount: 38,
+    // Illustrative "pending_resolution" example for mock mode: 2 of 9
+    // committed members have claimed resolved, window still open.
+    resolutionStatus: 'pending_resolution',
+    resolvedCount: 2,
+    totalCommitted: 9,
+    resolutionThreshold: 2,
+    resolutionWindowEndsAt: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(),
+    objectionCount: 0,
   },
   {
     id: 'p-watertesting',
@@ -64,6 +78,12 @@ export const PROBLEMS: Problem[] = [
     actorCount: 7,
     backerCount: 3,
     followingCount: 214,
+    resolutionStatus: 'open',
+    resolvedCount: 0,
+    totalCommitted: 22,
+    resolutionThreshold: 2,
+    resolutionWindowEndsAt: null,
+    objectionCount: 0,
   },
   {
     id: 'p-ramp',
@@ -78,6 +98,13 @@ export const PROBLEMS: Problem[] = [
     actorCount: 1,
     backerCount: 0,
     followingCount: 9,
+    // Only 2 committed members total — right at the threshold floor.
+    resolutionStatus: 'resolved',
+    resolvedCount: 2,
+    totalCommitted: 2,
+    resolutionThreshold: 2,
+    resolutionWindowEndsAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+    objectionCount: 0,
   },
   {
     id: 'p-sensors',
@@ -92,6 +119,13 @@ export const PROBLEMS: Problem[] = [
     actorCount: 2,
     backerCount: 0,
     followingCount: 27,
+    // Illustrative "disputed" example: threshold met but a member objected.
+    resolutionStatus: 'disputed',
+    resolvedCount: 2,
+    totalCommitted: 11,
+    resolutionThreshold: 2,
+    resolutionWindowEndsAt: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+    objectionCount: 1,
   },
 ];
 
