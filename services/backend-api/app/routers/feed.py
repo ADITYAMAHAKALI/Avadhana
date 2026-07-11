@@ -12,12 +12,12 @@ from sqlalchemy.orm import Session
 from app.core.auth_dependencies import get_current_user
 from app.db.session import get_session
 from app.impl.repositories import SqlAlchemyFeedRepo, SqlAlchemyUserRepo
-from app.interfaces.repositories import DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT
+from app.interfaces.repositories import DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT, FeedSort
 from app.models.commitment import Commitment
 from app.models.user import User
 from app.schemas import CommentCreateRequest, CommentOut, FeedPostOut, LikeOut, PostCreateRequest
 from app.services.commitment_gate import require_committed_member
-from app.services.feed_service import create_comment, create_post, toggle_like
+from app.services.feed_service import InvalidParentCommentError, create_comment, create_post, toggle_like
 from app.services.presenters import comment_to_out, post_to_out
 
 router = APIRouter(tags=["feed"])
@@ -49,13 +49,14 @@ def create_post_route(
 @router.get("/problems/{problem_id}/posts", response_model=list[FeedPostOut])
 def list_posts_route(
     problem_id: str,
+    sort: FeedSort = Query(default="new"),
     limit: int = Query(default=DEFAULT_PAGE_LIMIT, ge=1, le=MAX_PAGE_LIMIT),
     offset: int = Query(default=0, ge=0),
     session: Session = Depends(get_session),
 ) -> list[FeedPostOut]:
     feed_repo = SqlAlchemyFeedRepo(session)
     user_repo = SqlAlchemyUserRepo(session)
-    posts = feed_repo.list_posts_for_problem(problem_id, limit=limit, offset=offset)
+    posts = feed_repo.list_posts_for_problem(problem_id, sort=sort, limit=limit, offset=offset)
 
     # Batched (issue #77 N+1 fix): one `WHERE id IN (...)` for authors and
     # one grouped like-count query across all returned posts, instead of
@@ -111,13 +112,23 @@ def create_comment_route(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"error": "POST_NOT_FOUND", "message": f"No post with id {post_id} on this problem."},
         )
-    comment = create_comment(
-        post_id=post_id,
-        author_user_id=current_user.id,
-        author_role=commitment.role,
-        body=body.body,
-        feed_repo=feed_repo,
-    )
+    try:
+        comment = create_comment(
+            post_id=post_id,
+            author_user_id=current_user.id,
+            author_role=commitment.role,
+            body=body.body,
+            feed_repo=feed_repo,
+            parent_comment_id=body.parent_comment_id,
+        )
+    except InvalidParentCommentError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": "INVALID_PARENT_COMMENT",
+                "message": "parentCommentId must reference an existing comment on this same post.",
+            },
+        )
     return comment_to_out(comment, current_user)
 
 

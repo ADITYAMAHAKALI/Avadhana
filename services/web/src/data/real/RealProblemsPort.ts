@@ -1,5 +1,5 @@
 import type { DiscoverFilters, ProblemsPort } from '../interfaces';
-import type { FeedPost, Problem, ProblemGraphEdge, ProblemGraphNode, TaskItem } from '../../types/domain';
+import type { FeedPost, FeedSort, Problem, ProblemGraphEdge, ProblemGraphNode, TaskItem } from '../../types/domain';
 import { apiFetch, ApiError } from './httpClient';
 
 export type { DiscoverFilters };
@@ -32,8 +32,8 @@ export class RealProblemsPort implements ProblemsPort {
     return [];
   }
 
-  async getFeed(problemId: string): Promise<FeedPost[]> {
-    return apiFetch<FeedPost[]>(`/problems/${problemId}/posts`, { auth: false });
+  async getFeed(problemId: string, sort: FeedSort = 'new'): Promise<FeedPost[]> {
+    return apiFetch<FeedPost[]>(`/problems/${problemId}/posts?sort=${sort}`, { auth: false });
   }
 
   /** No backend support yet (problem hierarchy/merge graph deferred) — degrade gracefully instead of throwing. */

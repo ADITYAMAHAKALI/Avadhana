@@ -200,11 +200,17 @@ class FeedPostOut(CamelModel):
 
 class CommentCreateRequest(CamelModel):
     body: str = Field(min_length=1, max_length=2000)
+    # Nullable — null means a top-level reply to the post (issue #98).
+    # Depth is not validated here; see app/services/feed_service.py
+    # `create_comment` for the one server-side check that IS enforced
+    # (parent must belong to the same post).
+    parent_comment_id: str | None = None
 
 
 class CommentOut(CamelModel):
     id: str
     post_id: str
+    parent_comment_id: str | None
     author_initials: str
     author_name: str
     author_color: str

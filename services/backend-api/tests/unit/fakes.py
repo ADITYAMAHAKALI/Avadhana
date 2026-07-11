@@ -207,12 +207,23 @@ class FakeFeedRepo:
         return post
 
     def list_posts_for_problem(
-        self, problem_id: str, *, include_hidden: bool = False, limit: int = 20, offset: int = 0
+        self,
+        problem_id: str,
+        *,
+        sort: str = "new",
+        include_hidden: bool = False,
+        limit: int = 20,
+        offset: int = 0,
     ) -> list[FeedPost]:
         posts = [p for p in self.posts.values() if p.problem_id == problem_id]
         if not include_hidden:
             posts = [p for p in posts if not p.hidden]
-        posts = sorted(posts, key=lambda p: p.created_at, reverse=True)
+        if sort == "top":
+            posts = sorted(
+                posts, key=lambda p: (self.like_count(p.id), p.created_at), reverse=True
+            )
+        else:
+            posts = sorted(posts, key=lambda p: p.created_at, reverse=True)
         return posts[offset : offset + limit]
 
     def get_post(self, post_id: str) -> FeedPost | None:

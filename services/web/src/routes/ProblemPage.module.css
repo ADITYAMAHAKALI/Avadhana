@@ -240,6 +240,38 @@
   text-decoration: underline;
 }
 
+/* sort control (issue #98: New/Top, no "hot") */
+.sortRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+  font-size: 12.5px;
+  color: var(--color-ink-80);
+}
+
+.sortLabel {
+  color: var(--color-ink-muted);
+}
+
+.sortButton {
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-ink-80);
+  background: none;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-pill);
+  padding: 4px 12px;
+  cursor: pointer;
+}
+
+.sortButtonActive {
+  color: #fff;
+  background: var(--color-saffron);
+  border-color: var(--color-saffron);
+}
+
 .posts {
   margin-top: 22px;
   display: flex;
@@ -462,6 +494,52 @@
 
 .commentGate {
   font-size: 12.5px;
+}
+
+/* threaded replies (issue #98) */
+.commentNode {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Each nesting level adds a fixed left indent, capped visually at
+   MAX_VISUAL_DEPTH in ProblemPage.tsx — deeper replies stop indenting
+   further (Reddit-style) so a long thread can't push content off-screen. */
+.commentChildren {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+  padding-left: 18px;
+  border-left: 2px solid var(--color-line);
+}
+
+.commentActions {
+  display: flex;
+  gap: 14px;
+  margin-top: 4px;
+  font-size: 11.5px;
+}
+
+.commentReplyButton {
+  font-family: inherit;
+  font-size: 11.5px;
+  color: var(--color-ink-80);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.commentReplyButton:hover {
+  text-decoration: underline;
+}
+
+.commentReplyComposer {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
 }
 
 .poll {

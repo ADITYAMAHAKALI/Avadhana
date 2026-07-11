@@ -274,6 +274,120 @@ def test_list_comments_batched_authors_are_correct(client):
     assert comments["Bob comment"]["roleLabel"] == "Backer"
 
 
+def test_comment_reply_parent_comment_id_round_trips(client):
+    """A reply's parentCommentId round-trips through create + read
+    (issue #98). Top-level comments (no parentCommentId given) come
+    back with parentCommentId: null."""
+    headers = _signup_and_auth_headers(client, "threader1@example.com")
+    problem_id = _create_problem(client, headers)
+    _commit(client, headers, problem_id)
+    post = client.post(f"/problems/{problem_id}/posts", json={"body": "Post"}, headers=headers).json()
+
+    top_level = client.post(
+        f"/problems/{problem_id}/posts/{post['id']}/comments",
+        json={"body": "top level comment"},
+        headers=headers,
+    ).json()
+    assert top_level["parentCommentId"] is None
+
+    reply = client.post(
+        f"/problems/{problem_id}/posts/{post['id']}/comments",
+        json={"body": "a reply", "parentCommentId": top_level["id"]},
+        headers=headers,
+    ).json()
+    assert reply["parentCommentId"] == top_level["id"]
+
+    # Reply-to-a-reply also works (two levels deep).
+    nested_reply = client.post(
+        f"/problems/{problem_id}/posts/{post['id']}/comments",
+        json={"body": "a reply to the reply", "parentCommentId": reply["id"]},
+        headers=headers,
+    ).json()
+    assert nested_reply["parentCommentId"] == reply["id"]
+
+    # Flat-list-with-parent-pointers shape: GET returns all three,
+    # each carrying its own parentCommentId, not a nested tree.
+    resp = client.get(f"/problems/{problem_id}/posts/{post['id']}/comments")
+    assert resp.status_code == 200
+    by_id = {c["id"]: c for c in resp.json()}
+    assert len(by_id) == 3
+    assert by_id[top_level["id"]]["parentCommentId"] is None
+    assert by_id[reply["id"]]["parentCommentId"] == top_level["id"]
+    assert by_id[nested_reply["id"]]["parentCommentId"] == reply["id"]
+
+
+def test_comment_parent_must_belong_to_same_post(client):
+    """A comment's parentCommentId must reference a comment on the SAME
+    post — cross-post parent references are rejected (issue #98)."""
+    headers = _signup_and_auth_headers(client, "threader2@example.com")
+    problem_id = _create_problem(client, headers)
+    _commit(client, headers, problem_id)
+    post_a = client.post(f"/problems/{problem_id}/posts", json={"body": "Post A"}, headers=headers).json()
+    post_b = client.post(f"/problems/{problem_id}/posts", json={"body": "Post B"}, headers=headers).json()
+
+    comment_on_a = client.post(
+        f"/problems/{problem_id}/posts/{post_a['id']}/comments",
+        json={"body": "comment on post A"},
+        headers=headers,
+    ).json()
+
+    resp = client.post(
+        f"/problems/{problem_id}/posts/{post_b['id']}/comments",
+        json={"body": "reply pretending to be on post B", "parentCommentId": comment_on_a["id"]},
+        headers=headers,
+    )
+    assert resp.status_code == 400
+    assert resp.json()["detail"]["error"] == "INVALID_PARENT_COMMENT"
+
+
+def test_comment_parent_must_exist(client):
+    headers = _signup_and_auth_headers(client, "threader3@example.com")
+    problem_id = _create_problem(client, headers)
+    _commit(client, headers, problem_id)
+    post = client.post(f"/problems/{problem_id}/posts", json={"body": "Post"}, headers=headers).json()
+
+    resp = client.post(
+        f"/problems/{problem_id}/posts/{post['id']}/comments",
+        json={"body": "reply to nothing", "parentCommentId": "does-not-exist"},
+        headers=headers,
+    )
+    assert resp.status_code == 400
+    assert resp.json()["detail"]["error"] == "INVALID_PARENT_COMMENT"
+
+
+def test_posts_sort_new_vs_top_change_ordering(client):
+    """sort=new (default) orders by created_at desc; sort=top orders by
+    like_count desc (issue #98) — no upvote/downvote, existing like
+    count only."""
+    headers = _signup_and_auth_headers(client, "sorter1@example.com")
+    problem_id = _create_problem(client, headers)
+    _commit(client, headers, problem_id)
+
+    post1 = client.post(f"/problems/{problem_id}/posts", json={"body": "First"}, headers=headers).json()
+    post2 = client.post(f"/problems/{problem_id}/posts", json={"body": "Second"}, headers=headers).json()
+    post3 = client.post(f"/problems/{problem_id}/posts", json={"body": "Third"}, headers=headers).json()
+
+    # Give post3 (created last, so "new"-last) the most likes so "top"
+    # ordering is provably different from "new" ordering.
+    client.post(f"/problems/{problem_id}/posts/{post3['id']}/like", headers=headers)
+
+    other_headers = _signup_and_auth_headers(client, "sorter2@example.com")
+    _commit(client, other_headers, problem_id, role="actor")
+    client.post(f"/problems/{problem_id}/posts/{post3['id']}/like", headers=other_headers)
+    client.post(f"/problems/{problem_id}/posts/{post1['id']}/like", headers=other_headers)
+
+    resp_new = client.get(f"/problems/{problem_id}/posts", params={"sort": "new"})
+    assert [p["id"] for p in resp_new.json()] == [post3["id"], post2["id"], post1["id"]]
+
+    resp_top = client.get(f"/problems/{problem_id}/posts", params={"sort": "top"})
+    top_ids = [p["id"] for p in resp_top.json()]
+    # post3 has 2 likes (highest), post1 has 1, post2 has 0.
+    assert top_ids == [post3["id"], post1["id"], post2["id"]]
+
+    resp_default = client.get(f"/problems/{problem_id}/posts")
+    assert [p["id"] for p in resp_default.json()] == [post3["id"], post2["id"], post1["id"]]
+
+
 def test_abandoned_member_loses_posting_rights(client, db_session):
     from datetime import timedelta
 

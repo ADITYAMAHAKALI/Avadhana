@@ -1,5 +1,5 @@
 import type { DiscoverFilters, ProblemsPort } from '../interfaces';
-import type { Problem } from '../../types/domain';
+import type { FeedSort, Problem } from '../../types/domain';
 import {
   FEED_BY_PROBLEM,
   GRAPH_BY_PROBLEM,
@@ -29,8 +29,18 @@ export class MockProblemsPort implements ProblemsPort {
     return TASKS_BY_PROBLEM[problemId] ?? [];
   }
 
-  async getFeed(problemId: string) {
-    return FEED_BY_PROBLEM[problemId] ?? [];
+  /** `sort` (issue #98) mirrors the real backend's 'new'/'top' query
+   * param so mock mode (`npm run dev`, zero backend) exercises the same
+   * sort control the real API drives. No persisted `createdAt` timestamp
+   * on mock fixtures (they use pre-rendered `timeAgo` strings instead),
+   * so 'new' just returns fixture order (already newest-first by
+   * convention) — 'top' re-sorts by likeCount desc, which is real data. */
+  async getFeed(problemId: string, sort: FeedSort = 'new') {
+    const posts = FEED_BY_PROBLEM[problemId] ?? [];
+    if (sort === 'top') {
+      return [...posts].sort((a, b) => b.likeCount - a.likeCount);
+    }
+    return posts;
   }
 
   async getGraph(problemId: string) {
