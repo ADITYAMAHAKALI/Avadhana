@@ -1,13 +1,19 @@
-import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState, type FormEvent } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { isUsingRealData, problemsPort } from '../data';
 import { problemsApi } from '../data/real/problemsApi';
 import { ApiError } from '../data/real/httpClient';
 import { MockProblemsPort } from '../data/mock/MockProblemsPort';
-import type { Tier } from '../types/domain';
+import type { Problem, Tier } from '../types/domain';
 import { PageHeader } from '../components/shared/PageHeader';
 import { TierChip } from '../components/shared/TierChip';
 import styles from './NewProblemPage.module.css';
+
+/** Below this length, a title is too short for `q=` search to return meaningful matches — avoid firing a noisy search on every keystroke of a one-word title. */
+const SIMILAR_TITLE_MIN_LENGTH = 4;
+
+/** Cap on inline "similar problems" nudge results — this is a nudge, not a full search results page. */
+const SIMILAR_RESULTS_LIMIT = 3;
 
 /**
  * Condensed tier rubric shown inline next to the tier picker — full
@@ -58,6 +64,37 @@ export function NewProblemPage() {
   const [tier, setTier] = useState<Tier | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [similarProblems, setSimilarProblems] = useState<Problem[]>([]);
+
+  // Non-blocking "similar problems" nudge — debounced search against the
+  // title as the user types, same 250ms pattern DiscoverPage.tsx uses
+  // against the same GET /problems?q= endpoint. Title is the signal here
+  // (short, search-friendly); summary is too long-form to search well
+  // live. Never gates or delays submission — this effect only ever
+  // populates a suggestion list the create button doesn't depend on.
+  useEffect(() => {
+    const trimmed = title.trim();
+    if (trimmed.length < SIMILAR_TITLE_MIN_LENGTH) {
+      setSimilarProblems([]);
+      return;
+    }
+    let cancelled = false;
+    const handle = setTimeout(() => {
+      problemsPort
+        .listDiscoverable({ q: trimmed })
+        .then((results) => {
+          if (!cancelled) setSimilarProblems(results.slice(0, SIMILAR_RESULTS_LIMIT));
+        })
+        .catch(() => {
+          // Pure nudge — a failed search should never surface an error or block typing/submission.
+          if (!cancelled) setSimilarProblems([]);
+        });
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(handle);
+    };
+  }, [title]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -103,6 +140,23 @@ export function NewProblemPage() {
               maxLength={300}
               required
             />
+            {similarProblems.length > 0 && (
+              <div className={styles.similarNudge} role="status">
+                <div className={styles.similarNudgeHead}>
+                  {similarProblems.length} similar {similarProblems.length === 1 ? 'problem' : 'problems'} already{' '}
+                  {similarProblems.length === 1 ? 'exists' : 'exist'} — take a look before creating a new one?
+                </div>
+                <ul className={styles.similarNudgeList}>
+                  {similarProblems.map((p) => (
+                    <li key={p.id}>
+                      <Link to={`/problems/${p.id}`} target="_blank" rel="noreferrer">
+                        {p.title}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
 
           <div className={styles.field}>
