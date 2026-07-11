@@ -8,6 +8,7 @@ import { Modal } from '../components/shared/Modal';
 import { CommitModal } from '../components/CommitModal/CommitModal';
 import { feedApi } from '../data/real/feedApi';
 import { ApiError } from '../data/real/httpClient';
+import { resolutionApi } from '../data/real/resolutionApi';
 import styles from './ProblemPage.module.css';
 
 const TASK_BOX_CLASS: Record<TaskItem['status'], string> = {
@@ -15,6 +16,28 @@ const TASK_BOX_CLASS: Record<TaskItem['status'], string> = {
   open: styles.taskBoxOpen,
   unclaimed: styles.taskBoxUnclaimed,
 };
+
+/** Human-readable label for a Problem's aggregate resolution status
+ * (issue #100) — see app/services/problem_lifecycle_service.py for the
+ * exact computation this reflects. */
+function resolutionStatusLabel(problem: Problem): string {
+  switch (problem.resolutionStatus) {
+    case 'open':
+      return 'Open';
+    case 'pending_resolution': {
+      const daysLeft = problem.resolutionWindowEndsAt
+        ? Math.max(0, Math.ceil((new Date(problem.resolutionWindowEndsAt).getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
+        : 0;
+      return `Resolution pending (${problem.resolvedCount}/${problem.resolutionThreshold ?? '?'} claimed, resolves in ${daysLeft}d unless objected)`;
+    }
+    case 'resolved':
+      return 'Resolved';
+    case 'disputed':
+      return 'Disputed';
+    default:
+      return problem.resolutionStatus;
+  }
+}
 
 export function ProblemPage() {
   const { problemId } = useParams<{ problemId: string }>();
@@ -24,6 +47,18 @@ export function ProblemPage() {
   const [lock, setLock] = useState<CommittedProblemSummary | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [showCommit, setShowCommit] = useState(false);
+
+  // Resolution-objection state (issue #100). No server-truth "did I
+  // already object" flag comes back from GET /problems/{id} (the
+  // backend only exposes the aggregate, not per-user state) — this
+  // tracks it locally for the current session/page-load only, same
+  // accepted-tradeoff pattern as `likedPostIds` above. A page reload
+  // will show the "Object" button again even after objecting; the
+  // backend still correctly rejects a second real objection with
+  // ALREADY_OBJECTED, so this is a UX nicety, not the enforcement point.
+  const [objected, setObjected] = useState(false);
+  const [objecting, setObjecting] = useState(false);
+  const [objectionError, setObjectionError] = useState<string | null>(null);
 
   // Post composer state.
   const [composerBody, setComposerBody] = useState('');
@@ -72,6 +107,28 @@ export function ProblemPage() {
       cancelled = true;
     };
   }, [load]);
+
+  async function handleObjectToResolution() {
+    if (!problemId || objecting || objected) return;
+    setObjecting(true);
+    setObjectionError(null);
+    try {
+      await resolutionApi.objectToResolution(problemId);
+      setObjected(true);
+      // Reflect the objection immediately without a full reload — the
+      // backend's own compute-on-read status would say "disputed" too.
+      setProblem((prev) =>
+        prev
+          ? { ...prev, resolutionStatus: 'disputed', objectionCount: prev.objectionCount + 1 }
+          : prev,
+      );
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'Could not object. Please try again.';
+      setObjectionError(message);
+    } finally {
+      setObjecting(false);
+    }
+  }
 
   async function handleCreatePost() {
     if (!problemId || !composerBody.trim()) return;
@@ -195,6 +252,9 @@ export function ProblemPage() {
         </div>
         <div className={styles.headerRow}>
           <span className={styles.tierBadge}>{problem.tier}</span>
+          <span className={`${styles.resolutionBadge} ${styles[`resolutionBadge_${problem.resolutionStatus}`] ?? ''}`}>
+            {resolutionStatusLabel(problem)}
+          </span>
           <div className={styles.titleBlock}>
             <h1 className={styles.title}>{problem.title}</h1>
             <div className={styles.meta}>
@@ -203,6 +263,11 @@ export function ProblemPage() {
             </div>
           </div>
           <div className={styles.headerActions}>
+            {problem.resolutionStatus === 'pending_resolution' && isCommitted && !objected && (
+              <Button variant="secondary" onClick={handleObjectToResolution} disabled={objecting}>
+                {objecting ? 'Objecting…' : 'Object'}
+              </Button>
+            )}
             <Link to={`/graph/${problem.id}`}>
               <Button variant="secondary">Graph</Button>
             </Link>
@@ -215,6 +280,7 @@ export function ProblemPage() {
             </Button>
           </div>
         </div>
+        {objectionError && <div className={styles.composerError}>{objectionError}</div>}
       </div>
 
       <div className={styles.body}>

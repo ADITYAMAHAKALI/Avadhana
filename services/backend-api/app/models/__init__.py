@@ -19,6 +19,7 @@ from app.models.marketplace.rfp import RFP, RFPRequirement
 from app.models.marketplace.solution import Solution, SolutionAttribute
 from app.models.moderation import ModerationOverrideEvent
 from app.models.problem import Problem
+from app.models.resolution_objection import ResolutionObjection
 from app.models.user import User
 
 __all__ = [
@@ -31,6 +32,7 @@ __all__ = [
     "PostLike",
     "Comment",
     "ModerationOverrideEvent",
+    "ResolutionObjection",
     "Organization",
     "OrganizationMembership",
     "RFP",

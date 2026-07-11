@@ -43,7 +43,7 @@ export class MockProblemsPort implements ProblemsPort {
    * list so the creation screen has something sensible to do under
    * `npm run dev` without a backend, per the task brief.
    */
-  async createProblem(payload: Omit<Problem, 'id' | 'createdAt' | 'parentProblemTitle' | 'thinkerCount' | 'actorCount' | 'backerCount' | 'followingCount'>): Promise<Problem> {
+  async createProblem(payload: Omit<Problem, 'id' | 'createdAt' | 'parentProblemTitle' | 'thinkerCount' | 'actorCount' | 'backerCount' | 'followingCount' | 'resolutionStatus' | 'resolvedCount' | 'totalCommitted' | 'resolutionThreshold' | 'resolutionWindowEndsAt' | 'objectionCount'>): Promise<Problem> {
     const problem: Problem = {
       id: `mock-${nextMockId++}`,
       title: payload.title,
@@ -57,6 +57,14 @@ export class MockProblemsPort implements ProblemsPort {
       actorCount: 0,
       backerCount: 0,
       followingCount: 0,
+      // Freshly created: no commitments yet, so resolution status starts
+      // at the same "nothing claimed" default the backend returns.
+      resolutionStatus: 'open',
+      resolvedCount: 0,
+      totalCommitted: 0,
+      resolutionThreshold: null,
+      resolutionWindowEndsAt: null,
+      objectionCount: 0,
     };
     PROBLEMS.unshift(problem);
     return problem;

@@ -34,6 +34,7 @@ from app.models.marketplace.rfp import RFP, RFPRequirement
 from app.models.marketplace.solution import Solution, SolutionAttribute
 from app.models.moderation import ModerationOverrideEvent
 from app.models.problem import Problem
+from app.models.resolution_objection import ResolutionObjection
 from app.models.user import User
 
 # Pagination defaults/cap shared by every list/search port + router in
@@ -124,6 +125,29 @@ class CommitmentRepoPort(Protocol):
         single-problem method)."""
         ...
 
+    def list_active_for_problem(self, problem_id: str) -> list[Commitment]:
+        """Every ACTIVE commitment on this problem."""
+        ...
+
+    def list_non_abandoned_for_problem(self, problem_id: str) -> list[Commitment]:
+        """Every commitment on this problem that is ACTIVE or RESOLVED
+        (i.e. everything except ABANDONED) — the "currently committed
+        members" set that `app/services/problem_lifecycle_service.py`
+        (issue #100) computes the aggregate resolution status from.
+
+        Deliberately NOT `status == ACTIVE` only: a member who
+        self-reports `resolved` at their own checkpoint immediately
+        flips their own `Commitment.status` to RESOLVED (terminal, see
+        `app.services.checkpoint_service`), which would otherwise make
+        them vanish from the "currently committed" denominator at the
+        exact moment they cast the claim the whole computation is
+        counting. Abandoned members are excluded — someone who walked
+        away shouldn't count toward the quorum needed to verify others'
+        resolution claims, nor inflate the majority denominator. See
+        `problem_lifecycle_service` module docstring for the full
+        reasoning."""
+        ...
+
 
 class CheckpointRepoPort(Protocol):
     def add(self, checkpoint: CommitmentCheckpoint) -> CommitmentCheckpoint:
@@ -136,6 +160,20 @@ class CheckpointRepoPort(Protocol):
     def has_non_created_event(self, commitment_id: str) -> bool:
         """True once a commitment has been through resolve/abandon/
         continue — used to route it into commitment-history."""
+        ...
+
+    def list_latest_for_commitments(
+        self, commitment_ids: list[str]
+    ) -> dict[str, CommitmentCheckpoint]:
+        """Batched lookup of each commitment's MOST RECENT checkpoint row
+        (by `occurred_at`), keyed by `commitment_id` — used by
+        `app/services/problem_lifecycle_service.py` (issue #100) to
+        determine, for every currently-committed member on a problem,
+        whether their latest self-reported checkpoint is `resolved`.
+        Every commitment has at least a `created` row (written at
+        commitment creation), so a commitment id passed in here is only
+        absent from the result if it doesn't exist at all — callers
+        should treat a missing key as `None`, i.e. not resolved."""
         ...
 
 
@@ -206,6 +244,25 @@ class FeedRepoPort(Protocol):
         A post id with zero likes is simply absent from the returned
         dict (caller should treat a missing key as 0, same as
         `like_count` returning 0 for a post with no likes)."""
+        ...
+
+
+class ResolutionObjectionRepoPort(Protocol):
+    """Backs the problem-level resolution-verification protocol (issue
+    #100) — see `app.models.resolution_objection.ResolutionObjection`
+    and `app.services.problem_lifecycle_service` module docstrings."""
+
+    def add(self, objection: ResolutionObjection) -> ResolutionObjection:
+        """Insert-only — never update or delete (CLAUDE.md immutability
+        rule for audit trails), matching CheckpointRepoPort.add /
+        ModerationRepoPort.add."""
+        ...
+
+    def list_for_problem(self, problem_id: str) -> list[ResolutionObjection]:
+        """Every objection ever raised on this problem, across every
+        resolution-claim episode past or present — the status
+        computation in `problem_lifecycle_service` filters these down to
+        the ones falling inside the *current* episode's 7-day window."""
         ...
 
 
@@ -372,6 +429,7 @@ __all__ = [
     "CheckpointRepoPort",
     "FeedRepoPort",
     "ModerationRepoPort",
+    "ResolutionObjectionRepoPort",
     "OrganizationRepoPort",
     "RFPRepoPort",
     "SolutionRepoPort",

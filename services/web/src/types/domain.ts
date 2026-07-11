@@ -12,6 +12,18 @@ export type ActorSpecialization =
 
 export type CommitmentStatus = 'active' | 'resolved' | 'continued' | 'abandoned';
 
+/**
+ * Problem-level AGGREGATE resolution status (issue #100) — computed
+ * server-side from committed members' individual checkpoints, never
+ * set directly. See backend's
+ * app/services/problem_lifecycle_service.py for the full computation:
+ *   - open: below the resolved-claim threshold.
+ *   - pending_resolution: threshold met, 7-day objection window still open, no objection yet.
+ *   - resolved: threshold met, window closed (or still open) with zero objections.
+ *   - disputed: threshold met, at least one committed member objected inside the window.
+ */
+export type ProblemLifecycleStatus = 'open' | 'pending_resolution' | 'resolved' | 'disputed';
+
 export interface User {
   id: string;
   name: string;
@@ -57,6 +69,15 @@ export interface Problem {
   actorCount: number;
   backerCount: number;
   followingCount: number;
+  // --- Resolution status (issue #100) — computed server-side, read-only ---
+  resolutionStatus: ProblemLifecycleStatus;
+  resolvedCount: number;
+  totalCommitted: number;
+  /** null when the threshold is unreachable (fewer than 2 currently-committed members). */
+  resolutionThreshold: number | null;
+  /** null when there's no active/past resolution window (status === 'open'). */
+  resolutionWindowEndsAt: string | null;
+  objectionCount: number;
 }
 
 export interface TaskItem {

@@ -30,6 +30,10 @@ CheckpointEventOut = Literal["created", "resolved", "abandoned", "continued"]
 HistoryStatus = Literal["resolved", "continued", "abandoned"]
 ModerationTargetTypeOut = Literal["post", "comment"]
 ModerationActionOut = Literal["hidden", "restored"]
+# Aggregate problem-level resolution status (issue #100) — see
+# app/services/problem_lifecycle_service.py's module docstring for the
+# exact computation and what each value means.
+ProblemLifecycleStatusOut = Literal["open", "pending_resolution", "resolved", "disputed"]
 
 
 class CamelModel(BaseModel):
@@ -122,6 +126,18 @@ class ProblemOut(CamelModel):
     # Hardcoded 0: no follow-tracking exists yet (deferred, same reason
     # as parent_problem_title).
     following_count: int = 0
+    # --- Resolution status (issue #100) ---------------------------------
+    # Computed on read, never stored — see
+    # app/services/problem_lifecycle_service.py.
+    resolution_status: ProblemLifecycleStatusOut
+    resolved_count: int
+    total_committed: int
+    # None when the threshold is unreachable (fewer than 2 currently-
+    # committed members — see problem_lifecycle_service's threshold
+    # section).
+    resolution_threshold: int | None
+    resolution_window_ends_at: datetime | None
+    objection_count: int
 
 
 # --- Commitments --------------------------------------------------------
@@ -201,6 +217,16 @@ class LikeOut(CamelModel):
     like_count: int
 
 
+# --- Resolution objections (issue #100) ------------------------------------
+
+
+class ResolutionObjectionOut(CamelModel):
+    id: str
+    problem_id: str
+    objecting_user_id: str
+    raised_at: datetime
+
+
 # --- Moderation (issue #59: human moderator override baseline) ------------
 
 
@@ -242,4 +268,14 @@ class LockActiveError(CamelModel):
 
 class NotCommittedError(CamelModel):
     error: Literal["NOT_COMMITTED"] = "NOT_COMMITTED"
+    message: str
+
+
+class NoActiveResolutionWindowError(CamelModel):
+    error: Literal["NO_ACTIVE_RESOLUTION_WINDOW"] = "NO_ACTIVE_RESOLUTION_WINDOW"
+    message: str
+
+
+class AlreadyObjectedError(CamelModel):
+    error: Literal["ALREADY_OBJECTED"] = "ALREADY_OBJECTED"
     message: str

@@ -41,6 +41,35 @@
   margin-top: 4px;
 }
 
+/* Problem-level aggregate resolution status (issue #100) — see
+   app/services/problem_lifecycle_service.py for what each value means. */
+.resolutionBadge {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-ink-70);
+  background: var(--color-ink-10, #f0efec);
+  padding: 6px 12px;
+  border-radius: var(--radius-lg);
+  margin-top: 8px;
+  white-space: nowrap;
+}
+
+.resolutionBadge_pending_resolution {
+  color: var(--color-saffron);
+  background: var(--color-saffron-tint);
+  border: 1px solid var(--color-saffron-tint-border);
+}
+
+.resolutionBadge_resolved {
+  color: #fff;
+  background: var(--color-resolved);
+}
+
+.resolutionBadge_disputed {
+  color: #fff;
+  background: var(--color-abandoned);
+}
+
 .titleBlock {
   flex: 1;
 }
