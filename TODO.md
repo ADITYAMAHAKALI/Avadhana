@@ -1,6 +1,8 @@
 # Avadhana — Build Checklist
 
-Mirrors the GitHub issue backlog (`ADITYAMAHAKALI/Avadhana`, epics `#3` `#10` `#18` `#28` `#35` `#39` `#55` `#60` `#62`) so progress can be tracked here or on GitHub. Check items off in either place — GitHub is the source of truth for status; this file is for a quick local read.
+Mirrors the GitHub issue backlog (`ADITYAMAHAKALI/Avadhana`) so progress can be tracked here or on GitHub. Check items off in either place — GitHub is the source of truth for status; this file is for a quick local read.
+
+**2026-07-11 backlog hygiene pass**: 37 issues remain open (down from 59). Closed 22 issues that were already implemented and verified but still showing open on GitHub — epics `#3` (Core Commitment System) and `#62` (Solution Marketplace) are now fully done and closed; `#83` (Marketplace-vs-SLC-v1 sequencing) closed since the decision it tracked was made. Epics with real remaining scope stay open: `#10` `#18` `#28` `#35` `#55` `#60` `#87`. See each section below for exactly what's left.
 
 **Local Kubernetes Dev Environment is done** — every service runs locally on Podman/kind via `make dev-up` (see `docs/local-dev.md`). **SLC v1 scope decided 2026-07-09**: ship a minimal-but-complete build of the core commitment mechanic — the thing that actually differentiates this platform — before investing in AI coordination or gamification polish. Items marked **(post-v1)** below are real backlog, not cut; they're sequenced after the initial deployed release validates the core mechanic with 5–10 real problems (spec Section 10). See "SLC v1 Release Plan" immediately below for the build order and reasoning.
 
@@ -22,8 +24,10 @@ Build order:
 10. [x] Share, open/non-gated ([#30](https://github.com/ADITYAMAHAKALI/Avadhana/issues/30))
 11. [x] Wire the web frontend off mock data onto the endpoints above (routes already scaffolded: Login, Signup, Dashboard, Discover, Problem, Profile) — real ports live behind `VITE_API_BASE_URL`, mock stays default for zero-setup `npm run dev`
 12. [x] Reputation score computation ([#37](https://github.com/ADITYAMAHAKALI/Avadhana/issues/37)), tied to checkpoint events
-13. [x] Deploy to a single VPS via Docker Compose — see Deployment note below — `docker-compose.prod.yml` + `docs/vps-deployment.md` scaffolded; not yet actually deployed to a real VPS
-14. [ ] Recruit the 5–10 real local problems the spec calls for (Section 10) and pilot — not started, not an engineering task
+13. [ ] Deploy to a single VPS via Docker Compose — see Deployment note below — `docker-compose.prod.yml` + `docs/vps-deployment.md` fully scaffolded and documented; **not yet actually deployed to a real VPS**. Not an engineering-scope gap (the runbook is ready), needs a real hosting account/domain — genuinely the next actionable step once you're ready to provision one.
+14. [ ] Recruit the 5–10 real local problems the spec calls for (Section 10) and pilot — not started, not an engineering task, needs real-world outreach only a human can do
+
+**Both remaining SLC v1 items are non-engineering blockers, not backlog gaps** — everything code-shaped in the original release plan is done.
 
 **Deferred to post-v1** (revisit once the pilot validates the core mechanic and problem/discussion volume justifies the build cost):
 
@@ -53,7 +57,7 @@ Build order:
 - [x] [CI: build & validate container images + manifests](https://github.com/ADITYAMAHAKALI/Avadhana/issues/53)
 - [x] [Document local dev setup](https://github.com/ADITYAMAHAKALI/Avadhana/issues/54)
 
-## [Core Commitment System](https://github.com/ADITYAMAHAKALI/Avadhana/issues/3) — SLC v1 priority
+## [Core Commitment System](https://github.com/ADITYAMAHAKALI/Avadhana/issues/3) — done, epic closed 2026-07-11
 
 User, focus slots, commitments, 90-day lock.
 
@@ -119,10 +123,12 @@ Rewards follow-through, not activity — do not build a second engagement-farmin
 `services/web/` — React + TS + Vite, ported from the Claude Design mockup. Mock data layer behind ports until backend domain endpoints exist (issues #4-17).
 
 - [x] [Implement Avadhana Web app shell from Claude Design mockup](https://github.com/ADITYAMAHAKALI/Avadhana/issues/61)
+- [x] Sidebar dead-link fix + Commit/Checkpoint modal accessibility ([#74](https://github.com/ADITYAMAHAKALI/Avadhana/issues/74), [#75](https://github.com/ADITYAMAHAKALI/Avadhana/issues/75)) — removed the hardcoded fixture-problem-id nav links, real per-problem Graph/Coordinator navigation added; modal cards are real `<button>`s or `role="button"`+keyboard-handled, dialog semantics + focus management added, verified interactively
+- [ ] [Web frontend is not mobile-responsive — no `@media` queries anywhere](https://github.com/ADITYAMAHAKALI/Avadhana/issues/86) — confirmed zero `@media` rules across all 22 CSS modules despite a viewport meta tag existing; `AppShell`/`Sidebar` collapsing to a mobile nav is the highest-leverage single fix since every page inherits it
 
-## [Solution Marketplace](https://github.com/ADITYAMAHAKALI/Avadhana/issues/62) — all 11 sub-issues built
+## [Solution Marketplace](https://github.com/ADITYAMAHAKALI/Avadhana/issues/62) — done, epic closed 2026-07-11
 
-B2B/B2G RFP-to-Solution matching marketplace (multi-attribute + multi-embedding Reciprocal Rank Fusion). **Independent of the civic 3-slot/90-day-lock/commitment-gated-voice mechanic** — see CLAUDE.md "Solution Marketplace Architecture" for the full design, domain model, and open questions, and `architecture/modules/05-solution-marketplace.drawio.png` / `06-marketplace-matching-flow.drawio.png` for diagrams. **2026-07-10: explicit reprioritization call made** (previously an open product decision) — Marketplace was built out fully in this session, ahead of the SLC v1 pilot (VPS deploy + real problem recruitment are still the two open SLC v1 items). Legal/ToS review before real B2B usage is still an open gap (see business-viability audit, 2026-07-10).
+B2B/B2G RFP-to-Solution matching marketplace (multi-attribute + multi-embedding Reciprocal Rank Fusion). **Independent of the civic 3-slot/90-day-lock/commitment-gated-voice mechanic** — see CLAUDE.md "Solution Marketplace Architecture" for the full design, domain model, and open questions, and `architecture/modules/05-solution-marketplace.drawio.png` / `06-marketplace-matching-flow.drawio.png` for diagrams. **2026-07-10: explicit reprioritization call made** (previously an open product decision, tracked by #83 — now closed) — Marketplace was built out fully, ahead of the SLC v1 pilot (VPS deploy + real problem recruitment are still the two open SLC v1 items). All 11 sub-issues closed. Remaining real gaps: legal/ToS review before real B2B usage ([#78](https://github.com/ADITYAMAHAKALI/Avadhana/issues/78), scaffolding only so far), supply-side cold-start plan ([#82](https://github.com/ADITYAMAHAKALI/Avadhana/issues/82)), IDOR fix already shipped ([#84](https://github.com/ADITYAMAHAKALI/Avadhana/issues/84), closed).
 
 - [x] [Design Organization + membership schema](https://github.com/ADITYAMAHAKALI/Avadhana/issues/63)
 - [x] [RFP schema + posting flow](https://github.com/ADITYAMAHAKALI/Avadhana/issues/64)
@@ -135,6 +141,29 @@ B2B/B2G RFP-to-Solution matching marketplace (multi-attribute + multi-embedding 
 - [x] [Free-quota tracking + billing paywall gate](https://github.com/ADITYAMAHAKALI/Avadhana/issues/71) — quota tracked + `BillingEvent` ledger; no payment processor wired (out of scope per CLAUDE.md)
 - [x] [Web frontend: Marketplace tab](https://github.com/ADITYAMAHAKALI/Avadhana/issues/72)
 - [x] [Free-tier abuse safeguards](https://github.com/ADITYAMAHAKALI/Avadhana/issues/73) — partial: per-user rate limit on Organization creation; doesn't stop multi-account abuse (documented gap)
+
+## [Mobile App (Expo / React Native)](https://github.com/ADITYAMAHAKALI/Avadhana/issues/87) — in progress
+
+`apps/mobile/` (new top-level directory, own `package.json`, doesn't touch `services/web/`). Expo managed workflow + Expo Router. Talks to the same `services/backend-api` REST/JWT contract web uses (`services/web/src/data/real/httpClient.ts`) — no backend changes needed for the base client, and CLAUDE.md's core constraints (3-slot, 90-day lock, commitment-gated voice) are inherited for free since they're enforced server-side. JWT stored via `expo-secure-store` (iOS Keychain / Android Keystore) from day one — deliberately not repeating web's `localStorage` JWT storage, flagged as a latent XSS-exfiltration risk in the 2026-07-10 security audit (`audits/security-audit-2026-07-10.md`). **2026-07-11: explicit reprioritization call made** (per issue #87's own sequencing note and the #83 precedent) — mobile epic starts now, in parallel with the two still-open SLC v1 items (VPS deploy, real problem recruitment) and the in-flight Marketplace work; neither civic-core-loop item is being deprioritized by this.
+
+- [x] [Expo app scaffold + navigation](https://github.com/ADITYAMAHAKALI/Avadhana/issues/88) — Expo Router, `(tabs)` group (dashboard/discover/profile) + `problems/[problemId]` stack screen; template demo screens/assets removed
+- [x] [Auth flow (signup/login) with expo-secure-store](https://github.com/ADITYAMAHAKALI/Avadhana/issues/89) — token persisted via `expo-secure-store`; request/response shapes verified against the real `backend-api` app object (sqlite-backed, same technique as `tests/integration/conftest.py`): signup → token → authenticated `GET /users/me` → login → 401-on-bad-password, all matching the mobile client's expected contract
+- [ ] [Commit modal: role pick + 90-day-lock acknowledgment](https://github.com/ADITYAMAHAKALI/Avadhana/issues/90)
+- [ ] [Checkpoint flow (resolve/continue/abandon)](https://github.com/ADITYAMAHAKALI/Avadhana/issues/91)
+- [ ] [Problem feed: read + commitment-gated post/comment/like](https://github.com/ADITYAMAHAKALI/Avadhana/issues/92)
+- [ ] [Push notifications for checkpoint-due reminders](https://github.com/ADITYAMAHAKALI/Avadhana/issues/93) — addresses CLAUDE.md's Critical Open Issue #2 (hard-lock frustration); needs a backend-side scheduled trigger, not just a mobile client change
+- [ ] [Decide Marketplace scope for v1 mobile](https://github.com/ADITYAMAHAKALI/Avadhana/issues/94)
+- [ ] [Build/distribution: EAS vs internal-only first pass](https://github.com/ADITYAMAHAKALI/Avadhana/issues/95)
+
+## Audit Findings (2026-07-10/11) — remaining open items
+
+Filed by the four `audits/*.md` reports and not mapped to any epic above. Fixed items (#74-77, #84, #85) are already reflected in their relevant sections above and in closed GitHub issues — this section is only what's still open.
+
+- [ ] [Legal review + ToS/liability disclaimer before Actor role and Marketplace RFP flow reach real users](https://github.com/ADITYAMAHAKALI/Avadhana/issues/78) — **critical, needs your action, not engineering**: scaffolding shipped (`docs/legal-draft-DO-NOT-USE-WITHOUT-REVIEW.md`, visible warning UI in `CommitModal`/`NewRFPPage`), but a real lawyer reviewing actual jurisdiction-specific exposure is still outstanding. CLAUDE.md Critical Open Issue #4.
+- [ ] [Add HPA manifest for ai-coordinator-worker](https://github.com/ADITYAMAHAKALI/Avadhana/issues/79) — low priority pre-launch, no autoscaling story exists yet for any service (all `replicas: 1`)
+- [ ] [Add read-cache strategy for problem feed and marketplace browsing](https://github.com/ADITYAMAHAKALI/Avadhana/issues/80) — low priority pre-launch, no caching layer exists (Redis is only used as the RQ broker today)
+- [ ] [Track GTM/pilot seeding plan as real issues](https://github.com/ADITYAMAHAKALI/Avadhana/issues/81) — landing page copy drafted (`docs/landing-page-copy-draft.md`, not yet wired to a live route); recruiting the 5-10 real pilot problems and the launch blog post remain outreach-only work, same blocker as SLC v1 item 14 above
+- [ ] [Solution Marketplace: no supply-side (Solution listing) cold-start plan](https://github.com/ADITYAMAHAKALI/Avadhana/issues/82) — product decision (which vertical/geography to seed first, direct outreach vs. platform-authored listings), not a build task
 
 ## Security Checklist (pre-launch)
 
@@ -171,15 +200,15 @@ Not yet tracked as individual GitHub issues — derived from CLAUDE.md's Testing
 - [x] CI runs unit + integration tests on every PR; container images and k8s manifests validate — `test-backend-api` and `test-ai-coordinator-worker` jobs added alongside `build-images`/`validate-manifests`/`validate-compose`
 - [ ] End-to-end test of the full SLC v1 loop: sign up → commit → post as committed member → hit checkpoint — exercised manually (curl/Node scripts) during this session's verification passes, but no automated E2E suite (e.g. Playwright against the deployed stack, per `docs/testing-strategy.md`'s recommendation) exists yet
 
-    ## Marketing & Launch
+## Marketing & Launch
 
-Not yet tracked as individual GitHub issues. The spec (Section 9, risk 5 — "Growth tension") is explicit that the friction is the pitch, not a bug to hide — messaging should lead with it, not apologize for it.
+Tracked as GitHub issue [#81](https://github.com/ADITYAMAHAKALI/Avadhana/issues/81) (see "Audit Findings" above) — kept here too as the detailed checklist. The spec (Section 9, risk 5 — "Growth tension") is explicit that the friction is the pitch, not a bug to hide — messaging should lead with it, not apologize for it.
 
-- [ ] Landing page copy that explains *why* the constraints exist (3 slots, 90-day lock, commitment-gated voice) before asking anyone to sign up — the friction has to be sold, not discovered after the fact
+- [x] Landing page copy that explains *why* the constraints exist (3 slots, 90-day lock, commitment-gated voice) before asking anyone to sign up — drafted (`docs/landing-page-copy-draft.md`), not yet wired to a live route
 - [ ] Launch blog post on the core thesis — "commitment over engagement" — aimed at people frustrated with performative online activism (the Change.org comparison from spec Section 3.1)
 - [ ] Seed the pilot: identify and directly recruit the 5–10 real local problems plus initial Thinkers/Actors/Backers per problem — cold start (spec Section 9, risk 1) doesn't solve itself and needs manual outreach before public launch
 - [ ] Follow-up blog series once the pilot has real data — e.g. "what happened when we forced 10 people to pick 3 problems," case studies from resolved problems
 - [ ] Public, shareable problem pages (via the existing Share mechanic) double as organic content/SEO — the product itself produces shareable progress without a separate content team
 - [ ] Public metrics page reporting the Section 8 success metrics (% resolved by day 90, committed-to-observer ratio, role distribution) — proof points for later marketing, consistent with the platform's own accountability-first ethos
 - [ ] Consider a Show HN / Product Hunt style launch only after the pilot has at least one resolved or meaningfully progressed problem to point to — leading with an empty platform undercuts the "outcomes over spectating" pitch
-- [ ] Legal review of Actor-role language (RTI filings, legal action) before any of this messaging goes public, per spec Section 9 risk 4 — marketing copy shouldn't imply legal backing the platform doesn't provide
+- [ ] Legal review of Actor-role language (RTI filings, legal action) before any of this messaging goes public, per spec Section 9 risk 4 — marketing copy shouldn't imply legal backing the platform doesn't provide; tracked as [#78](https://github.com/ADITYAMAHAKALI/Avadhana/issues/78), same underlying gap
