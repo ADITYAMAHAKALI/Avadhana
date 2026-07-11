@@ -79,6 +79,9 @@ Problems, tiers, search, split/merge.
 - [ ] [Problem split mechanic](https://github.com/ADITYAMAHAKALI/Avadhana/issues/15) — post-v1
 - [ ] [Problem merge mechanic + conflict detection](https://github.com/ADITYAMAHAKALI/Avadhana/issues/16) — post-v1
 - [ ] [ProblemRelationship audit log](https://github.com/ADITYAMAHAKALI/Avadhana/issues/17) — post-v1
+- [ ] [Problem-level resolution status: aggregate from checkpoints + objection window](https://github.com/ADITYAMAHAKALI/Avadhana/issues/100) — 2026-07-11, resolves CLAUDE.md Known Unknown #3 ("Problem Lifecycle Protocol")
+- [ ] [Problem creation: surface similar existing problems before submit](https://github.com/ADITYAMAHAKALI/Avadhana/issues/102) — 2026-07-11, non-blocking duplicate nudge
+- [ ] [Tier-informed recruitment target guidance on the problem page](https://github.com/ADITYAMAHAKALI/Avadhana/issues/103) — 2026-07-11, advisory only
 
 ## [AI Coordination Layer (SARVAM AI)](https://github.com/ADITYAMAHAKALI/Avadhana/issues/18) — post-v1, entire epic deferred
 
@@ -102,12 +105,14 @@ Summarization, checklist generation, off-topic detection, moderation. Deferred u
 - [ ] [Task board: create / pick up / handover tasks](https://github.com/ADITYAMAHAKALI/Avadhana/issues/32) — post-v1
 - [ ] [Asset uploads](https://github.com/ADITYAMAHAKALI/Avadhana/issues/33) — post-v1
 - [ ] [Donation flow (Backer)](https://github.com/ADITYAMAHAKALI/Avadhana/issues/34) — post-v1 — ⚠️ open design question: slot-gated or open to non-committed supporters? Decide before building.
+- [ ] [Problem feed: threaded/nested replies + a real sort](https://github.com/ADITYAMAHAKALI/Avadhana/issues/98) — 2026-07-11, "Reddit-like feed" request; needs `Comment.parent_comment_id`, backend + frontend both, no vote mechanic (deliberately, see issue body)
 
 ## [Gamification & Reputation](https://github.com/ADITYAMAHAKALI/Avadhana/issues/35)
 
 Rewards follow-through, not activity — do not build a second engagement-farming loop.
 
 - [ ] [Badge schema + award rules](https://github.com/ADITYAMAHAKALI/Avadhana/issues/36) — post-v1
+- [ ] [Tier-weighted reputation deltas](https://github.com/ADITYAMAHAKALI/Avadhana/issues/101) — 2026-07-11, replaces flat +20/-15/0 with a tier-scaled table per CLAUDE.md's "Problem Lifecycle Protocol"
 - [x] [Reputation score computation](https://github.com/ADITYAMAHAKALI/Avadhana/issues/37) — SLC v1 — flat deltas on checkpoint events only (resolve +20, abandon -15, continue +0), verified never moves on posts/likes; tier-weighting deferred (post-v1, needs badges work too)
 - [x] [Profile page](https://github.com/ADITYAMAHAKALI/Avadhana/issues/38) — SLC v1 — wired to real data via `CurrentUserPort` (committed problems, commitment history, reputation)
 
@@ -125,6 +130,9 @@ Rewards follow-through, not activity — do not build a second engagement-farmin
 - [x] [Implement Avadhana Web app shell from Claude Design mockup](https://github.com/ADITYAMAHAKALI/Avadhana/issues/61)
 - [x] Sidebar dead-link fix + Commit/Checkpoint modal accessibility ([#74](https://github.com/ADITYAMAHAKALI/Avadhana/issues/74), [#75](https://github.com/ADITYAMAHAKALI/Avadhana/issues/75)) — removed the hardcoded fixture-problem-id nav links, real per-problem Graph/Coordinator navigation added; modal cards are real `<button>`s or `role="button"`+keyboard-handled, dialog semantics + focus management added, verified interactively
 - [ ] [Web frontend is not mobile-responsive — no `@media` queries anywhere](https://github.com/ADITYAMAHAKALI/Avadhana/issues/86) — confirmed zero `@media` rules across all 22 CSS modules despite a viewport meta tag existing; `AppShell`/`Sidebar` collapsing to a mobile nav is the highest-leverage single fix since every page inherits it
+- [ ] [Share button on ProblemPage has no handler](https://github.com/ADITYAMAHAKALI/Avadhana/issues/96) — 2026-07-11, real regression against the intent of closed #30 (backend read-side is public, but the UI button itself is a no-op)
+- [ ] [ProblemPage has multiple decorative/non-functional controls](https://github.com/ADITYAMAHAKALI/Avadhana/issues/97) — 2026-07-11, tabs that don't switch, dead breadcrumb, hardcoded avatar stack, fake-live AI summary card
+- [ ] [Polish the non-committed visitor "browse + share, don't engage" experience](https://github.com/ADITYAMAHAKALI/Avadhana/issues/99) — 2026-07-11, depends on #96
 
 ## [Solution Marketplace](https://github.com/ADITYAMAHAKALI/Avadhana/issues/62) — done, epic closed 2026-07-11
 

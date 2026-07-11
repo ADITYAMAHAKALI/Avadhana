@@ -92,7 +92,7 @@ All of these (except Share) should respect the commitment-gated voice principle 
 The platform rewards *follow-through*, not *activity*. This must not become a second incentive system that undermines the commitment mechanic — do not reward posting frequency, streaks, or other breadth/engagement metrics the way mainstream social platforms do.
 
 - **Badges**: awarded for depth-oriented milestones — e.g. first commitment made, a problem marked resolved, a full 90-day cycle completed without abandoning, resolving problems at increasing tiers (a badge for resolving an S-tier problem should mean much more than one for a D-tier problem).
-- **Reputation score**: already present on the User entity (see ERD). Should move on resolution/abandonment events, not on likes/comments/post volume.
+- **Reputation score**: already present on the User entity (see ERD). Should move on resolution/abandonment events, not on likes/comments/post volume. Deltas scale by problem tier — see "Problem Lifecycle Protocol" > "Reward protocol" above for the concrete table.
 - **Abandonment is a negative signal, not neutral**: consistent with the spec's existing "reputational cost to walking away" (Section 6.4), abandoned commitments should visibly count against a user's profile and never be counterbalanced by badges for something unrelated (e.g., a "prolific poster" badge would contradict the platform's thesis).
 - **Profile**: surfaces current committed problems (up to 3), badge collection, reputation score, and commitment history (resolved/abandoned/continued) — this is the user's public accountability record, not a vanity page.
 
@@ -278,6 +278,32 @@ When implementing features, keep these in mind:
 - Problem becomes searchable immediately
 - Tier can be re-assessed by committed members with threshold agreement
 - Tier re-assessment must be lightweight (governance-wise) or it won't get used
+- Before submit, the creation flow should surface similar existing problems (a plain search against the title/summary the user just typed) to reduce fragmentation — non-blocking, doesn't gate creation, just a nudge
+
+### Problem Lifecycle Protocol (2026-07-11)
+
+Resolves "Known Unknowns" #3 (resolution verification) below — this was previously an explicitly open question, now decided. Covers the full lifecycle from creation through resolution and reward, addressing a direct product gap: today "resolved" is purely an individual's own checkpoint choice (`resolve`/`abandon`/`continue` on *their* commitment), with no problem-level status and no verification step at all — contradicting the spec's own stated requirement that resolution "require more than one user's claim."
+
+**Success criteria / resolution verification** — a problem's aggregate status is *computed*, not separately voted on, reusing the existing per-commitment checkpoint mechanism rather than building a parallel voting system (keeps this lightweight, per the spec's own framing):
+- A problem becomes **Resolved** once at least 2 committed members, *or* a strict majority of currently-committed members (whichever is the smaller number), have independently marked their own commitment `resolved` at their checkpoint, **and** no other committed member has raised an objection within a 7-day window starting from the first `resolved` claim.
+- Any committed member may raise **one objection** during that window — a single lightweight action (no essay required), not a full dispute-resolution process. An objection blocks auto-resolution and surfaces the disagreement for the group to work out directly; the system does not auto-decide who's right.
+- This status is informational/aggregate — it does not retroactively change any individual's own checkpoint outcome, and it doesn't unlock or lock anything else on its own (no new permissions gated on it) for this first pass.
+
+**Engagement protocol** — tier-informed recruitment guidance, not a hard gate:
+- Since the Tier Classification Rubric already implies coordination overhead per tier (e.g. B-tier: "needs real task division across Thinker/Actor/Backer"), surface a suggested minimum role spread per tier on the problem page (illustrative starting point, not enforced): D/C-tier no specific guidance (often 1-2 people is genuinely enough), B-tier "aim for 2+ Actors", A/S-tier "aim for at least one Backer and multiple Actors across the affected area." Purely advisory copy, never a block on committing or on marking resolved.
+- Share (the external recruitment mechanic) must actually work — see "External Discovery & Visitor Flow" below; a broken share affordance undermines this whole section.
+
+**Reward protocol** — reputation deltas scale by tier (previously flat regardless of tier, despite the Gamification & Reputation section already saying a badge for resolving an S-tier problem "should mean much more than one for a D-tier problem" — this makes that principle concrete with actual numbers, same treatment the Tier Classification Rubric gave the S–D scale itself):
+
+| Tier | Resolve | Abandon | Continue |
+|------|---------|---------|----------|
+| D | +10 | -15 | 0 |
+| C | +20 | -15 | 0 |
+| B | +35 | -20 | 0 |
+| A | +60 | -25 | 0 |
+| S | +100 | -30 | 0 |
+
+Abandon penalties also scale up with tier — walking away from an S-tier commitment costs more reputation than a D-tier one, consistent with "reputational cost is the point" (see Commitment & Slot Management below). `Continue` stays a flat 0 at every tier — persistence itself isn't the signal being rewarded, follow-through to an actual outcome is.
 
 ### Commitment & Slot Management
 - Committing to a problem spends one of three slots and starts the 90-day clock
@@ -361,8 +387,8 @@ The specification deliberately leaves these open; address them as you build:
 
 1. **Abuse safeguards**: What prevents low-effort problem creation or coordinated brigading of role structure? Plan content moderation policies. (AI auto-blocking for off-topic is one safeguard; may need additional rate limiting or reputation scoring.)
 2. **Legal disclaimers**: RTI filings and legal cases organized through Actors need appropriate disclaimers and legal review before going public.
-3. **Resolution verification**: The spec says marking "resolved" should require more than one user's claim. Design a lightweight verification process among committed members.
-4. **Tier rubric concreteness**: The tier classifications (S–D) need concrete, testable terms (estimated hours / estimated funding ranges) so classification is consistent across problems.
+3. ~~**Resolution verification**~~ — **Resolved 2026-07-11**, see "Problem Lifecycle Protocol" under "Key Features & Their Constraints" > "Problem Creation" above: a problem's aggregate status becomes Resolved once ≥2 (or a strict majority, whichever is smaller) committed members independently mark their own commitment resolved, with a 7-day objection window.
+4. ~~**Tier rubric concreteness**~~ — **Resolved**, see "Tier Classification Rubric" above (concrete hour/funding ranges per tier, issue #12).
 5. **Model drift**: How do you detect when SARVAM model updates degrade off-topic detection accuracy? Monitor appeal rates and false-positive patterns.
 
 ## References
