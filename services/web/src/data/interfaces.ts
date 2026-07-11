@@ -2,6 +2,7 @@ import type {
   CommitmentHistoryEntry,
   CommittedProblemSummary,
   FeedPost,
+  FeedSort,
   InvocationLogEntry,
   ModerationQueueItem,
   Problem,
@@ -36,7 +37,8 @@ export interface ProblemsPort {
   listDiscoverable(filters?: DiscoverFilters): Promise<Problem[]>;
   getById(problemId: string): Promise<Problem | null>;
   getTasks(problemId: string): Promise<TaskItem[]>;
-  getFeed(problemId: string): Promise<FeedPost[]>;
+  /** `sort` (issue #98): 'new' (default, created_at desc) or 'top' (like_count desc). */
+  getFeed(problemId: string, sort?: FeedSort): Promise<FeedPost[]>;
   getGraph(problemId: string): Promise<{ nodes: ProblemGraphNode[]; edges: ProblemGraphEdge[] }>;
 }
 

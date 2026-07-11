@@ -84,6 +84,23 @@ class PostLike(Base):
 
 
 class Comment(Base):
+    """`parent_comment_id` (issue #98): nullable self-referential FK — null
+    means a top-level reply to the post, non-null means a reply to another
+    comment on the same post. Nesting depth is NOT enforced here: the
+    backend will happily store an arbitrarily-deep reply chain, since a
+    deep chain isn't harmful by itself — only the frontend needs a
+    practical depth cap for readable indentation (see ProblemPage.tsx,
+    `MAX_VISUAL_DEPTH`). This keeps the write path simple (no recursive
+    depth-counting query on every comment create) at zero real cost, since
+    Reddit-style UIs cap visual nesting client-side anyway.
+
+    Fetching a post's comments returns a flat list with parent pointers
+    (see `list_comments_for_post`) rather than a recursive tree query —
+    the frontend builds the tree client-side from the flat list. This
+    avoids N+1 recursive backend queries for what is, in practice, a
+    small number of comments per post.
+    """
+
     __tablename__ = "comments"
 
     id: Mapped[str] = mapped_column(
@@ -91,6 +108,9 @@ class Comment(Base):
     )
     post_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("feed_posts.id"), nullable=False, index=True
+    )
+    parent_comment_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("comments.id"), nullable=True, index=True
     )
     author_user_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("users.id"), nullable=False

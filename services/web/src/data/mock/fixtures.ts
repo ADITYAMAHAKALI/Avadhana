@@ -180,12 +180,53 @@ export const FEED_BY_PROBLEM: Record<string, FeedPost[]> = {
 };
 
 /**
- * Comments keyed by post id. Empty by default in the shipped fixtures — the
- * mock feedApi (services/web/src/data/real/feedApi.ts's mock-mode branch)
- * pushes into these arrays at runtime so posting/commenting/liking "work"
- * against mock data without a backend. Not persisted across a page reload.
+ * Comments keyed by post id. The mock feedApi
+ * (services/web/src/data/real/feedApi.ts's mock-mode branch) pushes into
+ * these arrays at runtime so posting/commenting/liking "work" against
+ * mock data without a backend. Not persisted across a page reload.
+ *
+ * Post f1 is seeded with a small thread (issue #98) — a top-level
+ * comment, a reply to it, and a reply-to-that-reply — so nested/threaded
+ * rendering (`buildCommentTree` in ProblemPage.tsx) is actually exercised
+ * in mock mode, not just against a live backend.
  */
-export const COMMENTS_BY_POST: Record<string, Comment[]> = {};
+export const COMMENTS_BY_POST: Record<string, Comment[]> = {
+  f1: [
+    {
+      id: 'c1',
+      postId: 'f1',
+      parentCommentId: null,
+      authorInitials: 'DK',
+      authorName: 'Divya Kulkarni',
+      authorColor: 'var(--color-backer)',
+      roleLabel: 'Backer',
+      timeAgo: '1h',
+      body: 'I can cover the lab re-test cost if it comes to that — let me know once the ward officer meeting happens.',
+    },
+    {
+      id: 'c2',
+      postId: 'f1',
+      parentCommentId: 'c1',
+      authorInitials: 'AS',
+      authorName: 'Anita Shah',
+      authorColor: 'var(--color-actor)',
+      roleLabel: 'Actor · Legal',
+      timeAgo: '45m',
+      body: 'Appreciated — will report back right after Thursday. Might not need it if the RTI response is enough on its own.',
+    },
+    {
+      id: 'c3',
+      postId: 'f1',
+      parentCommentId: 'c2',
+      authorInitials: 'RM',
+      authorName: 'Ravi Menon',
+      authorColor: 'var(--color-thinker)',
+      roleLabel: 'Thinker',
+      timeAgo: '30m',
+      body: "Agreed, let's hold off on the re-test ask until we see what the RTI turns up.",
+    },
+  ],
+};
 
 export const GRAPH_BY_PROBLEM: Record<
   string,

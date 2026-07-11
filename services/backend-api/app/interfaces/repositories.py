@@ -22,7 +22,7 @@ in-memory (never touching a DB session), which is enough to keep the
 service layer unit-testable per the brief.
 """
 
-from typing import Protocol
+from typing import Literal, Protocol
 
 from app.models.checkpoint import CommitmentCheckpoint
 from app.models.commitment import Commitment
@@ -41,6 +41,13 @@ from app.models.user import User
 # 100" doesn't drift between e.g. problems and RFPs.
 DEFAULT_PAGE_LIMIT = 20
 MAX_PAGE_LIMIT = 100
+
+# Feed post sort (issue #98): "new" = created_at desc (existing default,
+# free — already indexed by insertion order), "top" = like_count desc.
+# Explicitly no "hot" (time-decayed) sort in this pass — deferred until
+# there's enough real discussion volume to justify the complexity (see
+# issue #98's reasoning).
+FeedSort = Literal["new", "top"]
 
 
 class UserRepoPort(Protocol):
@@ -146,14 +153,20 @@ class FeedRepoPort(Protocol):
         self,
         problem_id: str,
         *,
+        sort: FeedSort = "new",
         include_hidden: bool = False,
         limit: int = DEFAULT_PAGE_LIMIT,
         offset: int = 0,
     ) -> list[FeedPost]:
-        """Newest first, `limit`/`offset` applied at the SQL level (issue
-        #76). `include_hidden=False` (the default, used by every normal
-        read endpoint) filters `hidden=True` rows out at the query level
-        — hidden content never round-trips to a normal caller. Only the
+        """`sort="new"` (default): newest first by `created_at desc` —
+        free, no join needed. `sort="top"`: by like count desc (issue
+        #98), computed via a `LEFT JOIN ... GROUP BY` against `PostLike`
+        since `FeedPost` doesn't denormalize a `like_count` column;
+        ties broken by `created_at desc` in both modes. `limit`/`offset`
+        applied at the SQL level (issue #76) after sorting.
+        `include_hidden=False` (the default, used by every normal read
+        endpoint) filters `hidden=True` rows out at the query level —
+        hidden content never round-trips to a normal caller. Only the
         admin-only moderation-log / future "view as admin" paths pass
         `include_hidden=True`."""
         ...
@@ -180,7 +193,12 @@ class FeedRepoPort(Protocol):
         limit: int = DEFAULT_PAGE_LIMIT,
         offset: int = 0,
     ) -> list[Comment]:
-        """See `list_posts_for_problem` for the `include_hidden` and
+        """Flat list, oldest first, each row carrying its own
+        `parent_comment_id` (issue #98) — NOT a recursive tree query.
+        The frontend builds the nested tree client-side from this flat
+        list + parent pointers, which avoids N+1 recursive backend
+        queries for what's typically a small number of comments per
+        post. See `list_posts_for_problem` for the `include_hidden` and
         `limit`/`offset` contract."""
         ...
 

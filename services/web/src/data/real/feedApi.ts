@@ -64,11 +64,24 @@ export const feedApi = {
     return apiFetch<{ likeCount: number }>(`/problems/${problemId}/posts/${postId}/like`, { method: 'POST' });
   },
 
-  async createComment(problemId: string, postId: string, body: string): Promise<Comment> {
+  /**
+   * `parentCommentId` (issue #98): omit/undefined for a top-level reply
+   * to the post, or pass an existing comment's id to nest this reply
+   * under it. The backend flat-list-with-parent-pointers shape means
+   * this is just one more field on the create call — no separate
+   * "reply to comment" endpoint.
+   */
+  async createComment(
+    problemId: string,
+    postId: string,
+    body: string,
+    parentCommentId: string | null = null,
+  ): Promise<Comment> {
     if (!useReal) {
       const comment: Comment = {
         id: mockId('c'),
         postId,
+        parentCommentId,
         authorInitials: CURRENT_USER.initials,
         authorName: CURRENT_USER.name,
         authorColor: CURRENT_USER.avatarColor,
@@ -80,7 +93,10 @@ export const feedApi = {
       COMMENTS_BY_POST[postId] = [...existing, comment];
       return comment;
     }
-    return apiFetch<Comment>(`/problems/${problemId}/posts/${postId}/comments`, { method: 'POST', body: { body } });
+    return apiFetch<Comment>(`/problems/${problemId}/posts/${postId}/comments`, {
+      method: 'POST',
+      body: { body, parentCommentId },
+    });
   },
 
   async getComments(problemId: string, postId: string): Promise<Comment[]> {

@@ -93,6 +93,11 @@ export interface FeedPost {
 export interface Comment {
   id: string;
   postId: string;
+  // Nullable — null means a top-level reply to the post; non-null means
+  // a reply to another comment on the same post (issue #98). The API
+  // returns a flat list with these parent pointers, not a nested tree —
+  // ProblemPage.tsx builds the tree client-side (see `buildCommentTree`).
+  parentCommentId: string | null;
   authorInitials: string;
   authorName: string;
   authorColor: string;
@@ -100,6 +105,10 @@ export interface Comment {
   timeAgo: string;
   body: string;
 }
+
+/** New/Top feed sort (issue #98). No "hot" sort in this pass — see
+ * feedApi.ts / backend FeedSort docstring for why. */
+export type FeedSort = 'new' | 'top';
 
 export interface ModerationQueueItem {
   id: string;

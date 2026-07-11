@@ -123,6 +123,7 @@ def comment_to_out(comment: Comment, author: User) -> CommentOut:
     return CommentOut(
         id=comment.id,
         post_id=comment.post_id,
+        parent_comment_id=comment.parent_comment_id,
         author_initials=initials_for_name(author.name),
         author_name=author.name,
         author_color=avatar_color_for_user_id(author.id),

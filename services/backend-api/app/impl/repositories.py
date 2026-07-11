@@ -23,7 +23,7 @@ from app.models.marketplace.matching import MatchRun, MatchRunStatus, SolutionMa
 from app.models.marketplace.organization import Organization, OrganizationMembership
 from app.models.marketplace.rfp import RFP, RFPRequirement
 from app.models.marketplace.solution import Solution, SolutionAttribute
-from app.interfaces.repositories import DEFAULT_PAGE_LIMIT
+from app.interfaces.repositories import DEFAULT_PAGE_LIMIT, FeedSort
 from app.models.moderation import ModerationOverrideEvent, ModerationTargetType
 from app.models.problem import Problem
 from app.models.user import User
@@ -229,14 +229,35 @@ class SqlAlchemyFeedRepo:
         self,
         problem_id: str,
         *,
+        sort: FeedSort = "new",
         include_hidden: bool = False,
         limit: int = DEFAULT_PAGE_LIMIT,
         offset: int = 0,
     ) -> list[FeedPost]:
-        stmt = select(FeedPost).where(FeedPost.problem_id == problem_id)
-        if not include_hidden:
-            stmt = stmt.where(FeedPost.hidden.is_(False))
-        stmt = stmt.order_by(FeedPost.created_at.desc()).limit(limit).offset(offset)
+        if sort == "top":
+            # like_count isn't denormalized on FeedPost, so "top" needs a
+            # LEFT JOIN + GROUP BY against PostLike (LEFT so zero-like
+            # posts aren't dropped). Ties broken by created_at desc, same
+            # as "new"'s sole ordering key.
+            like_count_col = func.count(PostLike.id)
+            stmt = (
+                select(FeedPost)
+                .outerjoin(PostLike, PostLike.post_id == FeedPost.id)
+                .where(FeedPost.problem_id == problem_id)
+            )
+            if not include_hidden:
+                stmt = stmt.where(FeedPost.hidden.is_(False))
+            stmt = (
+                stmt.group_by(FeedPost.id)
+                .order_by(like_count_col.desc(), FeedPost.created_at.desc())
+                .limit(limit)
+                .offset(offset)
+            )
+        else:
+            stmt = select(FeedPost).where(FeedPost.problem_id == problem_id)
+            if not include_hidden:
+                stmt = stmt.where(FeedPost.hidden.is_(False))
+            stmt = stmt.order_by(FeedPost.created_at.desc()).limit(limit).offset(offset)
         return list(self.session.execute(stmt).scalars().all())
 
     def get_post(self, post_id: str) -> FeedPost | None:
