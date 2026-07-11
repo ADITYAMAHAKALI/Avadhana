@@ -60,6 +60,10 @@ export function ProblemPage() {
   const [objecting, setObjecting] = useState(false);
   const [objectionError, setObjectionError] = useState<string | null>(null);
 
+  // Share button confirmation state (issue #96) — brief visible feedback
+  // after copying/sharing so a successful click doesn't look like a no-op.
+  const [shareConfirmed, setShareConfirmed] = useState(false);
+
   // Post composer state.
   const [composerBody, setComposerBody] = useState('');
   const [posting, setPosting] = useState(false);
@@ -127,6 +131,23 @@ export function ProblemPage() {
       setObjectionError(message);
     } finally {
       setObjecting(false);
+    }
+  }
+
+  async function handleShare() {
+    if (!problem) return;
+    const url = window.location.href;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: problem.title, url });
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      setShareConfirmed(true);
+      window.setTimeout(() => setShareConfirmed(false), 2000);
+    } catch {
+      // navigator.share throws when the user cancels the native share
+      // sheet — that's not a failure, so don't surface an error for it.
     }
   }
 
@@ -238,11 +259,28 @@ export function ProblemPage() {
     year: 'numeric',
   });
 
+  // Tier-informed recruitment guidance (issue #103) — advisory only, per
+  // CLAUDE.md's "Problem Lifecycle Protocol" > "Engagement protocol":
+  // D/C-tier gets no guidance (1-2 people is often genuinely enough),
+  // B-tier wants 2+ Actors, A/S-tier wants a Backer plus multiple Actors.
+  let recruitmentAdvisory: string | null = null;
+  if (problem.tier === 'B') {
+    if (problem.actorCount < 2) {
+      recruitmentAdvisory =
+        'This B-tier problem could use more Actors — coordinating fieldwork usually needs at least 2.';
+    }
+  } else if (problem.tier === 'A' || problem.tier === 'S') {
+    if (problem.backerCount === 0 || problem.actorCount < 2) {
+      recruitmentAdvisory =
+        'Consider recruiting a Backer and more Actors across the affected area for a problem this size.';
+    }
+  }
+
   return (
     <div className={styles.page}>
       <div className={styles.header}>
         <div className={styles.breadcrumb}>
-          <a>Discover</a>
+          <Link to="/discover">Discover</Link>
           {problem.parentProblemTitle && (
             <>
               {' '}
@@ -259,7 +297,9 @@ export function ProblemPage() {
             <h1 className={styles.title}>{problem.title}</h1>
             <div className={styles.meta}>
               {problem.location} · {problem.category} · created {createdAtLabel} · tier {problem.tier}{' '}
-              <a className={styles.disputeLink}>(dispute tier)</a>
+              <span className={styles.disputeLink} title="Tier reclassification isn't built yet (#14).">
+                (dispute tier)
+              </span>
             </div>
           </div>
           <div className={styles.headerActions}>
@@ -274,7 +314,9 @@ export function ProblemPage() {
             <Link to={`/coordinator/${problem.id}`}>
               <Button variant="secondary">Coordinator</Button>
             </Link>
-            <Button variant="secondary">↗ Share</Button>
+            <Button variant="secondary" onClick={handleShare}>
+              {shareConfirmed ? 'Copied!' : '↗ Share'}
+            </Button>
             <Button variant="primary" onClick={() => setShowCommit(true)}>
               Commit a slot
             </Button>
@@ -283,6 +325,12 @@ export function ProblemPage() {
         {objectionError && <div className={styles.composerError}>{objectionError}</div>}
       </div>
 
+      {!isCommitted && (
+        <div className={styles.visitorBanner}>
+          You&apos;re viewing as a visitor — read and share freely, commit a slot to join the discussion.
+        </div>
+      )}
+
       <div className={styles.body}>
         {/* feed column */}
         <div className={styles.feedColumn}>
@@ -290,27 +338,43 @@ export function ProblemPage() {
             <button type="button" className={`${styles.tab} ${styles.tabActive}`}>
               Feed
             </button>
-            <button type="button" className={styles.tab}>
+            <button
+              type="button"
+              className={`${styles.tab} ${styles.tabDisabled}`}
+              disabled
+              title="A dedicated task board isn't built yet — see the checklist card in the right rail for now (#32)."
+            >
               Tasks · {tasks.length}
             </button>
-            <button type="button" className={styles.tab}>
-              Assets · 4
+            <button
+              type="button"
+              className={`${styles.tab} ${styles.tabDisabled}`}
+              disabled
+              title="Asset uploads aren't built yet (#33)."
+            >
+              Assets
             </button>
-            <button type="button" className={styles.tab}>
+            <button
+              type="button"
+              className={`${styles.tab} ${styles.tabDisabled}`}
+              disabled
+              title="A member roster view isn't built yet — see the Committed counts in the right rail for now."
+            >
               Members · {problem.thinkerCount + problem.actorCount + problem.backerCount}
             </button>
           </div>
 
-          <div className={styles.summaryCard}>
+          <div className={`${styles.summaryCard} ${styles.summaryCardInactive}`}>
             <div className={styles.summaryHead}>
               <span className={styles.summaryMark}>✦</span>
               <span className={styles.summaryTitle}>SARVAM Coordinator · summary</span>
-              <span className={styles.summaryTime}>updated 3h ago</span>
+              <span className={styles.summaryBadgeComingSoon}>Not yet active</span>
             </div>
             <div className={styles.summaryBody}>
-              Testing at 3 borewells confirms nitrate above safe limits. The group agreed to pursue an RTI on the water
+              Example of what an AI-generated summary will look like once the coordination layer (#18) is live: &quot;Testing
+              at 3 borewells confirms nitrate above safe limits. The group agreed to pursue an RTI on the water
               board&apos;s internal logs before escalating. Two actors are meeting the ward officer Thursday; funding for
-              lab re-tests (₹18k) is the open blocker.
+              lab re-tests (₹18k) is the open blocker.&quot;
             </div>
           </div>
 
@@ -497,7 +561,12 @@ export function ProblemPage() {
                 </div>
               ))}
             </div>
-            <button type="button" className={styles.pickupButton}>
+            <button
+              type="button"
+              className={styles.pickupButton}
+              disabled
+              title="Task pickup isn't built yet — the task board is post-v1 (#32)."
+            >
               Pick up a task
             </button>
           </div>
@@ -517,21 +586,7 @@ export function ProblemPage() {
                 <span className={styles.breakdownBacker}>{problem.backerCount}</span> backer
               </span>
             </div>
-            <div className={styles.avatarStack}>
-              <span className={styles.stackAvatar} style={{ background: 'var(--color-thinker)' }}>
-                RM
-              </span>
-              <span className={styles.stackAvatar} style={{ background: 'var(--color-actor)' }}>
-                AS
-              </span>
-              <span className={styles.stackAvatar} style={{ background: 'var(--color-thinker)' }}>
-                DK
-              </span>
-              <span className={styles.stackAvatar} style={{ background: 'var(--color-backer)' }}>
-                PN
-              </span>
-              <span className={`${styles.stackAvatar} ${styles.stackAvatarMore}`}>+4</span>
-            </div>
+            {recruitmentAdvisory && <div className={styles.recruitmentAdvisory}>{recruitmentAdvisory}</div>}
           </div>
 
           <Link to={`/coordinator/${problem.id}`} className={styles.invokeButton}>

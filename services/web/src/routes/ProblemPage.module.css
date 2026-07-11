@@ -89,8 +89,9 @@
 }
 
 .disputeLink {
-  color: var(--color-saffron);
+  color: var(--color-ink-muted);
   margin-left: 4px;
+  cursor: default;
 }
 
 .headerActions {
@@ -135,11 +136,31 @@
   border-bottom-color: var(--color-saffron);
 }
 
+.tabDisabled {
+  color: var(--color-ink-muted);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.visitorBanner {
+  margin: 14px 48px 0;
+  padding: 10px 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  color: var(--color-ink-70);
+}
+
 .summaryCard {
   background: #f2eff6;
   border: 1px solid #dad3e6;
   border-radius: var(--radius-lg);
   padding: 18px 20px;
+}
+
+.summaryCardInactive {
+  opacity: 0.72;
 }
 
 .summaryHead {
@@ -167,10 +188,16 @@
   color: var(--color-thinker-text);
 }
 
-.summaryTime {
+.summaryBadgeComingSoon {
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
   color: #8a82a0;
+  background: #e6e1ee;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
   margin-left: auto;
 }
 
@@ -595,6 +622,11 @@
   margin-top: 14px;
 }
 
+.pickupButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .membersCard {
   margin-top: 16px;
 }
@@ -628,32 +660,15 @@
   font-weight: 600;
 }
 
-.avatarStack {
-  display: flex;
+.recruitmentAdvisory {
   margin-top: 14px;
-}
-
-.stackAvatar {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-pill);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid #fff;
-  margin-left: -8px;
-}
-
-.stackAvatar:first-child {
-  margin-left: 0;
-}
-
-.stackAvatarMore {
-  background: #efe7d8;
-  color: var(--color-ink-80);
+  padding: 10px 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-ink-70);
 }
 
 .invokeButton {
