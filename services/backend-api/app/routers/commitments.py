@@ -102,11 +102,17 @@ def checkpoint_route(
             commitment_repo=SqlAlchemyCommitmentRepo(session),
             checkpoint_repo=SqlAlchemyCheckpointRepo(session),
             user_repo=SqlAlchemyUserRepo(session),
+            problem_repo=SqlAlchemyProblemRepo(session),
         )
     except CommitmentNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"error": "COMMITMENT_NOT_FOUND", "message": str(exc)},
+        ) from exc
+    except ProblemNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": "PROBLEM_NOT_FOUND", "message": str(exc)},
         ) from exc
     except NotCommitmentOwnerError as exc:
         raise HTTPException(

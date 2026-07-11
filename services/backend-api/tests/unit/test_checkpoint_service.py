@@ -6,6 +6,13 @@ abandon/continue before 90 days have passed. No exceptions, no override
 path, anywhere in the code." Tests the boundary explicitly at day 89,
 day 90, and day 91, plus the resolve/abandon/continue outcomes
 (status, immutable audit rows, reputation deltas).
+
+Reputation deltas are tier-weighted (CLAUDE.md "Problem Lifecycle
+Protocol" > "Reward protocol", issue #101) — most tests below seed a
+C-tier problem so the numbers line up with the historical flat values
+(+20 resolve / -15 abandon / 0 continue) without every test needing to
+care about tiers; `test_reputation_deltas_scale_by_problem_tier` is
+where the tier-scaling itself is actually proven.
 """
 
 from datetime import timedelta
@@ -15,21 +22,27 @@ import pytest
 from app.core.time import utcnow
 from app.models.checkpoint import CommitmentCheckpoint
 from app.models.commitment import Commitment, CommitmentStatus
+from app.models.problem import Problem
 from app.models.user import User
 from app.services.checkpoint_service import (
-    REPUTATION_DELTA_ABANDON,
     REPUTATION_DELTA_CONTINUE,
-    REPUTATION_DELTA_RESOLVE,
     apply_checkpoint,
 )
 from app.services.errors import CommitmentNotActiveError, LockActiveError, NotCommitmentOwnerError
-from tests.unit.fakes import FakeCheckpointRepo, FakeCommitmentRepo, FakeUserRepo
+from tests.unit.fakes import FakeCheckpointRepo, FakeCommitmentRepo, FakeProblemRepo, FakeUserRepo
+
+# Historical flat deltas, still true at tier C — kept as named constants
+# so the many tier-agnostic tests below don't need to know the full
+# tier table, only what a C-tier problem currently pays out.
+REPUTATION_DELTA_RESOLVE = 20
+REPUTATION_DELTA_ABANDON = -15
 
 
-def _seeded(*, days_since_started: int, user_id: str = "user-1"):
+def _seeded(*, days_since_started: int, user_id: str = "user-1", tier: str = "C"):
     """Builds a commitment started `days_since_started` days ago, with a
     lock_expires_at consistent with that start (started_at + 90 days),
-    wired into fresh fake repos."""
+    wired into fresh fake repos. Defaults to a C-tier problem so
+    tier-agnostic tests get the historical +20/-15/0 deltas."""
     now = utcnow()
     started_at = now - timedelta(days=days_since_started)
     lock_expires_at = started_at + timedelta(days=90)
@@ -50,13 +63,27 @@ def _seeded(*, days_since_started: int, user_id: str = "user-1"):
     checkpoint_repo.add(CommitmentCheckpoint(commitment_id=commitment.id, event_type="created"))
     user_repo = FakeUserRepo()
     user_repo.add(User(id=user_id, name="Test User", email="t@example.com", password_hash="x"))
+    problem_repo = FakeProblemRepo()
+    problem_repo.add(
+        Problem(
+            id="problem-1",
+            title="Test problem",
+            summary="Summary",
+            location="Bengaluru",
+            category="civic",
+            tier=tier,
+            created_by_user_id=user_id,
+        )
+    )
 
-    return commitment, commitment_repo, checkpoint_repo, user_repo
+    return commitment, commitment_repo, checkpoint_repo, user_repo, problem_repo
 
 
 @pytest.mark.parametrize("action", ["resolve", "abandon", "continue"])
 def test_checkpoint_at_day_89_is_rejected(action):
-    commitment, commitment_repo, checkpoint_repo, user_repo = _seeded(days_since_started=89)
+    commitment, commitment_repo, checkpoint_repo, user_repo, problem_repo = _seeded(
+        days_since_started=89
+    )
 
     with pytest.raises(LockActiveError) as exc_info:
         apply_checkpoint(
@@ -67,6 +94,7 @@ def test_checkpoint_at_day_89_is_rejected(action):
             commitment_repo=commitment_repo,
             checkpoint_repo=checkpoint_repo,
             user_repo=user_repo,
+            problem_repo=problem_repo,
         )
     assert exc_info.value.days_remaining >= 1
     # No state mutation happened.
@@ -97,6 +125,18 @@ def test_checkpoint_exactly_at_day_90_boundary_is_rejected_if_lock_not_yet_expir
     checkpoint_repo.add(CommitmentCheckpoint(commitment_id=commitment.id, event_type="created"))
     user_repo = FakeUserRepo()
     user_repo.add(User(id="user-1", name="Test User", email="t@example.com", password_hash="x"))
+    problem_repo = FakeProblemRepo()
+    problem_repo.add(
+        Problem(
+            id="problem-1",
+            title="Test problem",
+            summary="Summary",
+            location="Bengaluru",
+            category="civic",
+            tier="C",
+            created_by_user_id="user-1",
+        )
+    )
 
     with pytest.raises(LockActiveError):
         apply_checkpoint(
@@ -107,11 +147,14 @@ def test_checkpoint_exactly_at_day_90_boundary_is_rejected_if_lock_not_yet_expir
             commitment_repo=commitment_repo,
             checkpoint_repo=checkpoint_repo,
             user_repo=user_repo,
+            problem_repo=problem_repo,
         )
 
 
 def test_checkpoint_at_day_91_is_allowed():
-    commitment, commitment_repo, checkpoint_repo, user_repo = _seeded(days_since_started=91)
+    commitment, commitment_repo, checkpoint_repo, user_repo, problem_repo = _seeded(
+        days_since_started=91
+    )
 
     result = apply_checkpoint(
         commitment_id=commitment.id,
@@ -121,12 +164,15 @@ def test_checkpoint_at_day_91_is_allowed():
         commitment_repo=commitment_repo,
         checkpoint_repo=checkpoint_repo,
         user_repo=user_repo,
+        problem_repo=problem_repo,
     )
     assert result.status == "resolved"
 
 
 def test_resolve_sets_terminal_status_frees_slot_and_awards_reputation():
-    commitment, commitment_repo, checkpoint_repo, user_repo = _seeded(days_since_started=95)
+    commitment, commitment_repo, checkpoint_repo, user_repo, problem_repo = _seeded(
+        days_since_started=95
+    )
 
     result = apply_checkpoint(
         commitment_id=commitment.id,
@@ -136,6 +182,7 @@ def test_resolve_sets_terminal_status_frees_slot_and_awards_reputation():
         commitment_repo=commitment_repo,
         checkpoint_repo=checkpoint_repo,
         user_repo=user_repo,
+        problem_repo=problem_repo,
     )
 
     assert result.status == "resolved"
@@ -148,7 +195,9 @@ def test_resolve_sets_terminal_status_frees_slot_and_awards_reputation():
 
 
 def test_abandon_sets_terminal_status_frees_slot_and_penalizes_reputation():
-    commitment, commitment_repo, checkpoint_repo, user_repo = _seeded(days_since_started=100)
+    commitment, commitment_repo, checkpoint_repo, user_repo, problem_repo = _seeded(
+        days_since_started=100
+    )
 
     result = apply_checkpoint(
         commitment_id=commitment.id,
@@ -158,6 +207,7 @@ def test_abandon_sets_terminal_status_frees_slot_and_penalizes_reputation():
         commitment_repo=commitment_repo,
         checkpoint_repo=checkpoint_repo,
         user_repo=user_repo,
+        problem_repo=problem_repo,
     )
 
     assert result.status == "abandoned"
@@ -166,7 +216,9 @@ def test_abandon_sets_terminal_status_frees_slot_and_penalizes_reputation():
 
 
 def test_continue_keeps_active_resets_lock_and_does_not_change_reputation():
-    commitment, commitment_repo, checkpoint_repo, user_repo = _seeded(days_since_started=95)
+    commitment, commitment_repo, checkpoint_repo, user_repo, problem_repo = _seeded(
+        days_since_started=95
+    )
     old_lock_expiry = commitment.lock_expires_at
 
     result = apply_checkpoint(
@@ -177,6 +229,7 @@ def test_continue_keeps_active_resets_lock_and_does_not_change_reputation():
         commitment_repo=commitment_repo,
         checkpoint_repo=checkpoint_repo,
         user_repo=user_repo,
+        problem_repo=problem_repo,
     )
 
     assert result.status == "active"
@@ -187,7 +240,9 @@ def test_continue_keeps_active_resets_lock_and_does_not_change_reputation():
 
 
 def test_abandoned_commitment_cannot_be_resolved_afterward_no_un_abandon():
-    commitment, commitment_repo, checkpoint_repo, user_repo = _seeded(days_since_started=100)
+    commitment, commitment_repo, checkpoint_repo, user_repo, problem_repo = _seeded(
+        days_since_started=100
+    )
 
     apply_checkpoint(
         commitment_id=commitment.id,
@@ -197,6 +252,7 @@ def test_abandoned_commitment_cannot_be_resolved_afterward_no_un_abandon():
         commitment_repo=commitment_repo,
         checkpoint_repo=checkpoint_repo,
         user_repo=user_repo,
+        problem_repo=problem_repo,
     )
 
     with pytest.raises(CommitmentNotActiveError):
@@ -208,11 +264,12 @@ def test_abandoned_commitment_cannot_be_resolved_afterward_no_un_abandon():
             commitment_repo=commitment_repo,
             checkpoint_repo=checkpoint_repo,
             user_repo=user_repo,
+            problem_repo=problem_repo,
         )
 
 
 def test_non_owner_cannot_checkpoint_someone_elses_commitment():
-    commitment, commitment_repo, checkpoint_repo, user_repo = _seeded(
+    commitment, commitment_repo, checkpoint_repo, user_repo, problem_repo = _seeded(
         days_since_started=100, user_id="owner"
     )
 
@@ -225,7 +282,78 @@ def test_non_owner_cannot_checkpoint_someone_elses_commitment():
             commitment_repo=commitment_repo,
             checkpoint_repo=checkpoint_repo,
             user_repo=user_repo,
+            problem_repo=problem_repo,
         )
+
+
+@pytest.mark.parametrize(
+    "tier,expected_resolve,expected_abandon",
+    [
+        ("D", 10, -15),
+        ("C", 20, -15),
+        ("B", 35, -20),
+        ("A", 60, -25),
+        ("S", 100, -30),
+    ],
+)
+def test_reputation_deltas_scale_by_problem_tier(tier, expected_resolve, expected_abandon):
+    """Proves the tier-weighted table from CLAUDE.md's Problem Lifecycle
+    Protocol: the same action (resolve or abandon) on the same
+    days-since-started produces a different reputation delta depending
+    on the committed problem's tier — e.g. resolving a D-tier problem
+    gives +10, resolving an S-tier problem gives +100."""
+    commitment, commitment_repo, checkpoint_repo, user_repo, problem_repo = _seeded(
+        days_since_started=95, tier=tier
+    )
+
+    apply_checkpoint(
+        commitment_id=commitment.id,
+        caller_user_id="user-1",
+        action="resolve",
+        note="Done",
+        commitment_repo=commitment_repo,
+        checkpoint_repo=checkpoint_repo,
+        user_repo=user_repo,
+        problem_repo=problem_repo,
+    )
+    assert user_repo.get_by_id("user-1").reputation == expected_resolve
+
+    # Fresh commitment/user for the abandon half of the same tier, so
+    # the two deltas don't accumulate onto the same user.
+    commitment2, commitment_repo2, checkpoint_repo2, user_repo2, problem_repo2 = _seeded(
+        days_since_started=100, user_id="user-2", tier=tier
+    )
+    apply_checkpoint(
+        commitment_id=commitment2.id,
+        caller_user_id="user-2",
+        action="abandon",
+        note="Giving up",
+        commitment_repo=commitment_repo2,
+        checkpoint_repo=checkpoint_repo2,
+        user_repo=user_repo2,
+        problem_repo=problem_repo2,
+    )
+    assert user_repo2.get_by_id("user-2").reputation == expected_abandon
+
+
+def test_continue_stays_flat_zero_regardless_of_tier():
+    """`continue` is deliberately NOT in the tier table — persistence
+    itself isn't the rewarded signal, per CLAUDE.md."""
+    for tier in ("D", "C", "B", "A", "S"):
+        commitment, commitment_repo, checkpoint_repo, user_repo, problem_repo = _seeded(
+            days_since_started=95, tier=tier
+        )
+        apply_checkpoint(
+            commitment_id=commitment.id,
+            caller_user_id="user-1",
+            action="continue",
+            note=None,
+            commitment_repo=commitment_repo,
+            checkpoint_repo=checkpoint_repo,
+            user_repo=user_repo,
+            problem_repo=problem_repo,
+        )
+        assert user_repo.get_by_id("user-1").reputation == 0
 
 
 def test_no_bypass_flag_exists_for_the_lock():

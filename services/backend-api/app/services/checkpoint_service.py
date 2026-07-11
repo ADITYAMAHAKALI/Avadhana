@@ -12,21 +12,35 @@ Critical Open Issue #2 explicitly flags that an early-exit path is a
 *product decision* that hasn't been made, not something to slip in as an
 engineering convenience.
 
-Reputation deltas (flat for SLC v1 — tier-weighting is explicitly
-deferred per the build brief, since S-tier vs D-tier resolution "should
-mean much more" per CLAUDE.md but the concrete weighting isn't decided
-yet):
-  - resolve:  +20
-  - abandon:  -15
-  - continue:   0  (deliberately neutral — rewarding "continue" would
-                     incentivize endless-continue farming as a way to
-                     rack up reputation without ever finishing anything,
-                     which contradicts "rewards follow-through, not
-                     activity")
+Reputation deltas are tier-weighted per CLAUDE.md's "Problem Lifecycle
+Protocol" > "Reward protocol" (issue #101) — resolving/abandoning a
+higher-tier problem moves reputation more than a lower-tier one, making
+concrete the Gamification & Reputation section's principle that "a badge
+for resolving an S-tier problem should mean much more than one for a
+D-tier problem":
+
+  Tier | Resolve | Abandon | Continue
+  -----|---------|---------|---------
+  D    |    +10  |    -15  |    0
+  C    |    +20  |    -15  |    0
+  B    |    +35  |    -20  |    0
+  A    |    +60  |    -25  |    0
+  S    |   +100  |    -30  |    0
+
+`continue` stays a flat 0 at every tier — per CLAUDE.md, "persistence
+itself isn't the signal being rewarded, follow-through to an actual
+outcome is." Rewarding it would incentivize endless-continue farming as
+a way to rack up reputation without ever finishing anything, which
+contradicts "rewards follow-through, not activity."
 """
 
 from app.core.time import utcnow
-from app.interfaces.repositories import CheckpointRepoPort, CommitmentRepoPort, UserRepoPort
+from app.interfaces.repositories import (
+    CheckpointRepoPort,
+    CommitmentRepoPort,
+    ProblemRepoPort,
+    UserRepoPort,
+)
 from app.models.checkpoint import CheckpointEventType, CommitmentCheckpoint
 from app.models.commitment import Commitment, CommitmentStatus, default_lock_expiry
 from app.services.errors import (
@@ -34,10 +48,9 @@ from app.services.errors import (
     CommitmentNotFoundError,
     LockActiveError,
     NotCommitmentOwnerError,
+    ProblemNotFoundError,
 )
 
-REPUTATION_DELTA_RESOLVE = 20
-REPUTATION_DELTA_ABANDON = -15
 REPUTATION_DELTA_CONTINUE = 0
 
 _ACTION_TO_EVENT_TYPE = {
@@ -46,11 +59,28 @@ _ACTION_TO_EVENT_TYPE = {
     "continue": CheckpointEventType.CONTINUED.value,
 }
 
-_ACTION_TO_REPUTATION_DELTA = {
-    "resolve": REPUTATION_DELTA_RESOLVE,
-    "abandon": REPUTATION_DELTA_ABANDON,
-    "continue": REPUTATION_DELTA_CONTINUE,
+# Tier-weighted reputation deltas, keyed by (action, tier). `continue` is
+# intentionally absent here — it's a single flat constant handled
+# separately in `_reputation_delta_for()`, not a 5-row table, since it
+# doesn't vary by tier.
+_REPUTATION_DELTA_TABLE: dict[tuple[str, str], int] = {
+    ("resolve", "D"): 10,
+    ("resolve", "C"): 20,
+    ("resolve", "B"): 35,
+    ("resolve", "A"): 60,
+    ("resolve", "S"): 100,
+    ("abandon", "D"): -15,
+    ("abandon", "C"): -15,
+    ("abandon", "B"): -20,
+    ("abandon", "A"): -25,
+    ("abandon", "S"): -30,
 }
+
+
+def _reputation_delta_for(action: str, tier: str) -> int:
+    if action == "continue":
+        return REPUTATION_DELTA_CONTINUE
+    return _REPUTATION_DELTA_TABLE[(action, tier)]
 
 
 def _assert_lock_expired(commitment: Commitment) -> None:
@@ -78,6 +108,7 @@ def apply_checkpoint(
     commitment_repo: CommitmentRepoPort,
     checkpoint_repo: CheckpointRepoPort,
     user_repo: UserRepoPort,
+    problem_repo: ProblemRepoPort,
 ) -> Commitment:
     commitment = commitment_repo.get_by_id(commitment_id)
     if commitment is None:
@@ -114,7 +145,15 @@ def apply_checkpoint(
         )
     )
 
-    delta = _ACTION_TO_REPUTATION_DELTA[action]
+    # Tier-weighted deltas need the Problem row (Commitment only carries
+    # problem_id, not tier) — one extra lookup via the same
+    # ProblemRepoPort.get_by_id already used elsewhere (e.g.
+    # app/routers/problems.py), no new repo method needed.
+    problem = problem_repo.get_by_id(commitment.problem_id)
+    if problem is None:  # pragma: no cover - FK guarantees this in practice
+        raise ProblemNotFoundError(commitment.problem_id)
+
+    delta = _reputation_delta_for(action, problem.tier)
     if delta != 0:
         user_repo.update_reputation(caller_user_id, delta)
 
