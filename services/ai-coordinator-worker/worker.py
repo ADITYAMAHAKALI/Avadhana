@@ -32,18 +32,25 @@ invocation is simpler than adding a second module-level global just for
 this one job.
 
 Usage:
-    python worker.py
+    python worker.py            # persistent listen (local k8s dev, VPS Compose)
+    python worker.py --burst    # process whatever's queued now, then exit
+                                 # (a scheduled invocation, e.g. GitHub
+                                 # Actions on a free-tier deploy — see
+                                 # docs/free-tier-deployment.md)
 
 Configuration:
     REDIS_URL — full Redis connection string (default: redis://localhost:6379/0)
     DATABASE_URL — Postgres connection string, required only when a
         marketplace-matching job actually runs (see db_config.py).
+    WORKER_BURST — "true"/"false" (default "false"). Same effect as
+        --burst, for invokers that can't pass CLI args.
     See `sarvam_config.py` for SARVAM-related env vars.
 """
 
 from __future__ import annotations
 
 import os
+import sys
 
 from impl.rq_job_queue import RQJobQueue
 from impl.sarvam_client import HttpSarvamClient
@@ -101,16 +108,27 @@ def sarvam_ping_job() -> str:
     return result.content
 
 
-def run_worker(job_queue: JobQueuePort, queue_names: list[str]) -> None:
+def run_worker(job_queue: JobQueuePort, queue_names: list[str], burst: bool = False) -> None:
     """Start listening for jobs via the injected `JobQueuePort`.
 
     Kept separate from `main()` so tests can call this with a fake
     `JobQueuePort` without touching env vars or real Redis.
     """
-    job_queue.listen(queue_names)
+    job_queue.listen(queue_names, burst=burst)
 
 
-def main() -> None:
+def _resolve_burst_flag(argv: list[str]) -> bool:
+    """`--burst` on the command line, or `WORKER_BURST=true` in the
+    environment (for platforms that invoke this as `python worker.py`
+    with no way to pass extra CLI args, e.g. a scheduled CI job — see
+    docs/free-tier-deployment.md). Either one is sufficient; neither is
+    required, and the default (persistent listen) is unchanged."""
+    if "--burst" in argv:
+        return True
+    return os.environ.get("WORKER_BURST", "false").strip().lower() == "true"
+
+
+def main(argv: list[str] | None = None) -> None:
     # Redis/SARVAM connections are constructed here, inside main(), and
     # nowhere at module import time — this keeps `import worker`
     # side-effect-free (safe for tooling/tests) even without a reachable
@@ -126,7 +144,8 @@ def main() -> None:
         default_model=sarvam_config.default_model,
     )
 
-    run_worker(job_queue, [QUEUE_NAME, MARKETPLACE_MATCHING_QUEUE_NAME])
+    burst = _resolve_burst_flag(sys.argv[1:] if argv is None else argv)
+    run_worker(job_queue, [QUEUE_NAME, MARKETPLACE_MATCHING_QUEUE_NAME], burst=burst)
 
 
 if __name__ == "__main__":

@@ -26,9 +26,18 @@ class JobQueuePort(Protocol):
     Deliberately narrow: it does not expose RQ's full `Queue`/`Worker`/
     `Connection` API surface, only what a caller of this service needs —
     start listening for jobs on a set of named queues and block until the
-    process is stopped.
+    process is stopped (or, in burst mode, until the queues are drained).
     """
 
-    def listen(self, queue_names: list[str]) -> None:
-        """Block and process jobs from the given queue names until stopped."""
+    def listen(self, queue_names: list[str], burst: bool = False) -> None:
+        """Process jobs from the given queue names.
+
+        `burst=False` (default) blocks forever, same as today — this is
+        what local k8s dev and the always-on VPS Compose deploy use.
+        `burst=True` processes every currently-queued job and returns
+        instead of blocking, for callers that are themselves invoked
+        periodically rather than staying resident (e.g. a scheduled CI
+        job standing in for a free-tier host with no persistent-worker
+        tier — see docs/free-tier-deployment.md).
+        """
         ...

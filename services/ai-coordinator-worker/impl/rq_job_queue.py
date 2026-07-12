@@ -22,8 +22,14 @@ class RQJobQueue:
         self._redis_url = redis_url
         self._connection = Redis.from_url(redis_url)
 
-    def listen(self, queue_names: list[str]) -> None:
-        """Build RQ `Queue`s for `queue_names` and block on `Worker.work()`."""
+    def listen(self, queue_names: list[str], burst: bool = False) -> None:
+        """Build RQ `Queue`s for `queue_names` and run `Worker.work()`.
+
+        `burst=True` maps directly onto RQ's own `Worker.work(burst=True)`,
+        which processes everything currently queued and returns instead of
+        blocking — see `interfaces.job_queue.JobQueuePort.listen` for why
+        a caller would want that.
+        """
         queues = [Queue(name, connection=self._connection) for name in queue_names]
         worker = Worker(queues, connection=self._connection)
-        worker.work()
+        worker.work(burst=burst)

@@ -1,0 +1,60 @@
+# Scheduled AI Coordinator invocation for the free-tier deployment
+# (docs/free-tier-deployment.md). ai-coordinator-worker is normally a
+# persistent RQ listener (see services/ai-coordinator-worker/worker.py) —
+# fine for local k8s dev and the always-on VPS Compose deploy
+# (docs/vps-deployment.md), but free-tier hosts generally don't offer a
+# free persistent-background-process tier. Instead, this runs the worker
+# in burst mode (process whatever's queued, then exit) on a schedule,
+# matching CLAUDE.md's own framing of AI coordination as "invoked
+# on-demand... every 3-6 hours," not something that needs to stay resident.
+#
+# Requires these repository secrets (see docs/free-tier-deployment.md
+# section 3d for where each value comes from):
+#   REDIS_URL             — Upstash Redis connection string
+#   DATABASE_URL           — Neon Postgres connection string (marketplace
+#                             matching job writes here)
+#   SARVAM_USE_MOCK         — "true" for the SLC v1 pilot (mocked SARVAM)
+#   SARVAM_MOCK_BASE_URL    — the deployed sarvam-mock service's URL,
+#                             only read when SARVAM_USE_MOCK is true
+#   SARVAM_API_KEY          — only required if SARVAM_USE_MOCK is "false"
+#
+# This workflow is inert (does nothing on every run except log "no jobs
+# queued") until something actually enqueues work onto Redis — e.g.
+# backend-api's Marketplace RFP-publish trigger (issue #68).
+
+name: AI Coordinator (scheduled, burst mode)
+
+on:
+  schedule:
+    # Every 4 hours — within CLAUDE.md's "every 3-6 hours" cadence for AI
+    # coordination invocation. Cron is UTC; adjust if a different cadence
+    # is needed once real usage exists.
+    - cron: "0 */4 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  run-burst:
+    name: run worker (burst)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ai-coordinator-worker
+        working-directory: services/ai-coordinator-worker
+        run: pip install -e .
+
+      - name: Run worker in burst mode
+        working-directory: services/ai-coordinator-worker
+        env:
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SARVAM_USE_MOCK: ${{ secrets.SARVAM_USE_MOCK }}
+          SARVAM_MOCK_BASE_URL: ${{ secrets.SARVAM_MOCK_BASE_URL }}
+          SARVAM_API_KEY: ${{ secrets.SARVAM_API_KEY }}
+        run: python worker.py --burst
