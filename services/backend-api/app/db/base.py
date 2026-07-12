@@ -6,12 +6,26 @@ importing model modules directly (avoids circular imports once models
 start referencing each other via relationships).
 """
 
-from sqlalchemy import event
+from sqlalchemy import MetaData, event
 from sqlalchemy.orm import DeclarativeBase
+
+# Named so Alembic autogenerate can reliably detect and diff constraints —
+# without this, unnamed indexes/constraints show up as unpredictable
+# add/drop pairs (or must be hand-named in every migration, as
+# fk_comments_parent_comment_id_comments was). Only affects DDL generated
+# from this metadata going forward; existing constraint names in the
+# live schema are untouched.
+_NAMING_CONVENTION = {
+    "ix": "ix_%(column_0_label)s",
+    "uq": "uq_%(table_name)s_%(column_0_name)s",
+    "ck": "ck_%(table_name)s_%(constraint_name)s",
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+    "pk": "pk_%(table_name)s",
+}
 
 
 class Base(DeclarativeBase):
-    pass
+    metadata = MetaData(naming_convention=_NAMING_CONVENTION)
 
 
 @event.listens_for(Base, "init", propagate=True)

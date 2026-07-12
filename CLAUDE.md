@@ -257,6 +257,16 @@ All moderation actions and AI operations should be immutable—never update or d
 ### Code Style & Linting
 *(Document linting rules, pre-commit hooks, etc.)*
 
+### Fetching Current Library Docs (`chub`)
+Before writing or updating code against an external library or API in this stack — FastAPI, SQLAlchemy, Alembic, Pydantic, pgvector, React, React Router, Vite, SARVAM AI, expo-secure-store, etc. — pull the current docs instead of relying on training-data memory of the API surface, which drifts as these libraries release new minor/major versions:
+
+```bash
+chub search "<library>" --json      # find the right doc id
+chub get <id> --lang py             # or --lang ts/js — fetch it
+```
+
+Use the fetched doc as the source of truth for the call shape, config pattern, or idiom, not a remembered version. If something project-specific isn't covered by the doc (a gotcha, a version quirk, a workaround this codebase needed), save it with `chub annotate <id> "<note>"` so the next session starts with that context already loaded. This mirrors the `get-api-docs` skill's workflow (`npx skills add https://github.com/andrewyng/context-hub --skill get-api-docs`) — reach for `chub` any time the user asks for "latest" behavior, mentions a library version, or you're about to write non-trivial code against one of this stack's dependencies.
+
 ### Invoking the AI Coordinator
 - Triggered by: Moderator/coordinator role via UI, or scheduled job (every 3–6 hours)
 - Outputs: Problem summary, task checklist, flagged off-topic contributions

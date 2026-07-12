@@ -22,7 +22,7 @@ from app.core.config import settings
 
 
 def _build_engine():
-    return create_engine(settings.database_url, pool_pre_ping=True, future=True)
+    return create_engine(settings.database_url, pool_pre_ping=True)
 
 
 # Created lazily on first use via a simple module-level cache rather than
@@ -42,9 +42,7 @@ def get_engine():
 def get_sessionmaker() -> sessionmaker:
     global _SessionLocal
     if _SessionLocal is None:
-        _SessionLocal = sessionmaker(
-            bind=get_engine(), autoflush=False, autocommit=False, future=True
-        )
+        _SessionLocal = sessionmaker(bind=get_engine(), autoflush=False)
     return _SessionLocal
 
 

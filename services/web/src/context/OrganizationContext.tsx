@@ -73,7 +73,7 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     [organizations, activeOrganization, isLoading, setActiveOrganizationId, refresh],
   );
 
-  return <OrganizationContext.Provider value={value}>{children}</OrganizationContext.Provider>;
+  return <OrganizationContext value={value}>{children}</OrganizationContext>;
 }
 
 export function useOrganization() {
