@@ -29,7 +29,14 @@ const NAV_ITEMS = [
   { to: '/marketplace', label: 'Marketplace' },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  /** Whether the mobile drawer is open. Ignored above the tablet breakpoint, where the sidebar is always visible. */
+  isOpen: boolean;
+  /** Closes the mobile drawer — called on nav click, Escape, or backdrop click. */
+  onClose: () => void;
+}
+
+export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { logout } = useAuth();
   const [user, setUser] = useState<User | null>(null);
   const [slots, setSlots] = useState({ used: 0, total: 3 });
@@ -46,45 +53,61 @@ export function Sidebar() {
     return subscribeFocusSlotsRefresh(refresh);
   }, [refresh]);
 
+  // Escape-to-close only matters for the mobile drawer; a no-op listener
+  // above the tablet breakpoint (where isOpen is never toggled) is harmless
+  // but skipped anyway to avoid a stray global listener.
+  useEffect(() => {
+    if (!isOpen) return;
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') onClose();
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   return (
-    <aside className={styles.sidebar}>
-      <div className={styles.brandRow}>
-        <div className={styles.mark}>अवधान</div>
-        <div className={styles.wordmark}>Avadhana</div>
-      </div>
-      <div className={styles.tagline}>Time is the point</div>
+    <>
+      {isOpen && <div className={styles.backdrop} onClick={onClose} aria-hidden="true" />}
+      <aside className={`${styles.sidebar} ${isOpen ? styles.sidebarOpen : ''}`}>
+        <div className={styles.brandRow}>
+          <div className={styles.mark}>अवधान</div>
+          <div className={styles.wordmark}>Avadhana</div>
+        </div>
+        <div className={styles.tagline}>Time is the point</div>
 
-      <nav className={styles.nav}>
-        {NAV_ITEMS.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            className={({ isActive }) => `${styles.navbtn} ${isActive ? styles.navbtnActive : ''}`}
-          >
-            {item.label}
-          </NavLink>
-        ))}
-      </nav>
+        <nav className={styles.nav}>
+          {NAV_ITEMS.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              onClick={onClose}
+              className={({ isActive }) => `${styles.navbtn} ${isActive ? styles.navbtnActive : ''}`}
+            >
+              {item.label}
+            </NavLink>
+          ))}
+        </nav>
 
-      <FocusSlotsWidget used={slots.used} total={slots.total} />
+        <FocusSlotsWidget used={slots.used} total={slots.total} />
 
-      {user && (
-        <div className={styles.userRow}>
-          <div className={styles.avatar} style={{ background: user.avatarColor }}>
-            {user.initials}
-          </div>
-          <div className={styles.userInfo}>
-            <div className={styles.userName}>{user.name}</div>
-            <div className={styles.userMeta}>
-              rep {user.reputation}
-              {committed[0] ? ` · ${ROLE_LABEL[committed[0].role]}` : ''}
+        {user && (
+          <div className={styles.userRow}>
+            <div className={styles.avatar} style={{ background: user.avatarColor }}>
+              {user.initials}
+            </div>
+            <div className={styles.userInfo}>
+              <div className={styles.userName}>{user.name}</div>
+              <div className={styles.userMeta}>
+                rep {user.reputation}
+                {committed[0] ? ` · ${ROLE_LABEL[committed[0].role]}` : ''}
+              </div>
+            </div>
+            <div className={styles.signOut} onClick={logout}>
+              Sign out
             </div>
           </div>
-          <div className={styles.signOut} onClick={logout}>
-            Sign out
-          </div>
-        </div>
-      )}
-    </aside>
+        )}
+      </aside>
+    </>
   );
 }

@@ -78,4 +78,19 @@
   --space-4: 16px;
   --space-5: 22px;
   --space-6: 28px;
+
+  /*
+   * Breakpoints (issue #86). Documentation only — custom properties can't
+   * be read inside an @media condition, so these aren't consumed directly.
+   * Every @media rule added anywhere in the app should hardcode one of
+   * these exact px values rather than inventing a new breakpoint, so the
+   * 22+ CSS modules stay consistent:
+   *   768px — "tablet": nav collapses from the persistent Sidebar to the
+   *           mobile drawer/hamburger pattern; two-panel layouts (auth
+   *           pages) and side-by-side forms stack to one column.
+   *   480px — "mobile": further tightens spacing/type/grid columns for
+   *           small phones (375px viewport is the baseline test width).
+   */
+  --bp-tablet: 768px;
+  --bp-mobile: 480px;
 }

@@ -27,11 +27,11 @@ export function LoginPage() {
           <div className={styles.mark}>अवधान</div>
           <div className={styles.wordmark}>Avadhana</div>
         </div>
-        <div className={styles.tagline}>Time is the one currency you can never earn back.</div>
+        <div className={styles.tagline}>An hour of focus outweighs a week of scrolling.</div>
         <div className={styles.bullets}>
           <div className={styles.bullet}>
             <span className={styles.dot} />
-            <span>At most 3 focus slots, ever.</span>
+            <span>No feed. No doomscrolling. Three focus slots, chosen on purpose.</span>
           </div>
           <div className={styles.bullet}>
             <span className={styles.dot} />
