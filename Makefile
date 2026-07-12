@@ -4,7 +4,7 @@
 # Quick start:
 #   cp .env.example .env   # first time only, then fill in real values
 #   make dev-up
-#   kubectl port-forward svc/backend-api 8000:8000 -n avadhana-dev
+#   make dev-forward        # keeps port-forward alive across pod restarts
 #   make dev-down           # tear down when finished
 
 CLUSTER_NAME := avadhana-dev
@@ -19,7 +19,7 @@ DEPLOYED_SERVICES := backend-api ai-coordinator-worker sarvam-mock
 # All buildable services, deployed or not — kept in sync with .github/workflows/ci.yaml's build matrix.
 ALL_SERVICES := backend-api moderation ai-coordinator-worker sarvam-mock
 
-.PHONY: dev-up dev-down dev-status dev-logs cluster-up secrets build-images load-images apply-data apply-apps migrate
+.PHONY: dev-up dev-down dev-status dev-logs dev-forward cluster-up secrets build-images load-images apply-data apply-apps migrate
 
 dev-up: cluster-up secrets apply-data build-images load-images apply-apps migrate
 	@echo ""
@@ -37,6 +37,15 @@ dev-status:
 # Usage: make dev-logs SERVICE=backend-api
 dev-logs:
 	kubectl logs -l app=$(SERVICE) -n $(NAMESPACE) --tail=100 -f
+
+# Keeps `kubectl port-forward svc/backend-api 8000:8000` alive across pod
+# restarts (e.g. the Podman VM cycling while idle silently kills any running
+# port-forward — see infra/k8s/scripts/port-forward-watchdog.sh). Run this
+# in its own terminal and leave it for the session instead of manually
+# restarting port-forward whenever the frontend starts failing with
+# connection-refused errors.
+dev-forward:
+	./infra/k8s/scripts/port-forward-watchdog.sh
 
 cluster-up:
 	@if ! kind get clusters 2>/dev/null | grep -qx '$(CLUSTER_NAME)'; then \
