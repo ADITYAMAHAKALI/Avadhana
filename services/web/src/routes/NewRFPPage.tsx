@@ -153,7 +153,7 @@ export function NewRFPPage() {
 
           <div className={styles.field}>
             <div className={styles.fieldLabel}>Resolution mode</div>
-            <div className={styles.tierGrid} style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+            <div className={styles.tierGrid3}>
               {RESOLUTION_MODES.map((m) => (
                 <button
                   key={m.value}

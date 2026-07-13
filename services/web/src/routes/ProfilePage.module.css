@@ -296,3 +296,27 @@
   line-height: 1.5;
   margin-top: 4px;
 }
+
+/* Below 768px (see --bp-tablet in tokens.css): the avatar/name-vs-
+   reputation header row and the 2fr/1fr content grid don't fit a phone
+   viewport — the reputation number was getting clipped off-screen and
+   the sidebar column (badges, follow-through) was squeezed unreadably
+   thin instead of stacking below the main column. */
+@media (max-width: 768px) {
+  .page {
+    padding: 24px 20px 40px;
+  }
+
+  .headerRow {
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .reputationBlock {
+    text-align: left;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

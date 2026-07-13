@@ -215,3 +215,31 @@
   margin-top: 16px;
   pointer-events: none;
 }
+
+/* Below 768px (see --bp-tablet in tokens.css): the fixed 3-column grid
+   (committed-problem cards + open-slot cards) doesn't fit a phone
+   viewport — cards were getting clipped, forcing the page into a
+   horizontal-scroll strip instead of stacking. Collapse to one column
+   and tighten the page padding, which was sized for desktop margins. */
+@media (max-width: 768px) {
+  .page {
+    padding: 24px 20px 40px;
+  }
+
+  .checkpoint {
+    flex-wrap: wrap;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .openSlotCard {
+    min-height: 0;
+    padding: 24px 22px;
+  }
+
+  .openSlotBody {
+    max-width: none;
+  }
+}

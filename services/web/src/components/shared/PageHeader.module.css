@@ -30,3 +30,23 @@
 .actions {
   flex: none;
 }
+
+/* Below 768px (see --bp-tablet in tokens.css): title + CTA button no
+   longer fit on one row without clipping (this header is reused across
+   Discover/Marketplace/NewProblem/NewRFP/NewSolution, so fixing it here
+   fixes all of them). Stack the action below the title block instead. */
+@media (max-width: 768px) {
+  .row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .title {
+    font-size: 26px;
+  }
+
+  .subtitle {
+    max-width: none;
+  }
+}

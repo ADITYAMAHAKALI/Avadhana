@@ -202,3 +202,19 @@
   color: var(--color-ink-70);
   line-height: 1.55;
 }
+
+/* Below 768px (see --bp-tablet in tokens.css): the 3-column stat row and
+   the 1.6fr/1fr moderation-queue/log columns don't fit a phone viewport. */
+@media (max-width: 768px) {
+  .page {
+    padding: 24px 20px 40px;
+  }
+
+  .statRow {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .columns {
+    grid-template-columns: 1fr;
+  }
+}

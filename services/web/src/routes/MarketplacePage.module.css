@@ -178,3 +178,30 @@
   border: 1px dashed var(--color-line-strong);
   border-radius: var(--radius-lg);
 }
+
+/* Below 768px (see --bp-tablet in tokens.css): the Industry/Geography
+   filter row and 2-column RFP/Solution card grid don't fit a phone
+   viewport — both were forcing a horizontal-scroll strip. */
+@media (max-width: 768px) {
+  .page {
+    padding: 24px 20px 40px;
+  }
+
+  .headerActions {
+    flex-wrap: wrap;
+  }
+
+  .filterRow {
+    flex-wrap: wrap;
+  }
+
+  .filterInput {
+    width: auto;
+    flex: 1;
+    min-width: 120px;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

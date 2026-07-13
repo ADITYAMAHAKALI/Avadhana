@@ -38,6 +38,26 @@
   overflow: hidden;
 }
 
+/* Below 768px (see --bp-tablet in tokens.css): node positions are
+   computed for a desktop-width canvas (see GraphPage.tsx) — rather than
+   redoing that layout math for narrow viewports, let the canvas scroll
+   internally (contained overflow, not a page-level one) so nodes that
+   don't fit are reachable by panning instead of silently clipped. */
+@media (max-width: 768px) {
+  .page {
+    padding: 24px 20px 40px;
+  }
+
+  .legend {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .canvas {
+    overflow: auto;
+  }
+}
+
 .svg {
   position: absolute;
   inset: 0;

@@ -109,6 +109,19 @@
   gap: 10px;
 }
 
+/* NewRFPPage's resolution-mode picker (3 options, longer descriptive
+   text per card) reuses this module's tierCard styling but needs its
+   own column count — a dedicated class instead of an inline
+   `style={{ gridTemplateColumns }}` override, so the mobile media query
+   below can still apply (an inline style would always win over an
+   external stylesheet rule regardless of media query, which is exactly
+   what silently broke this on mobile before this class existed). */
+.tierGrid3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
 .tierCard {
   text-align: left;
   cursor: pointer;
@@ -227,4 +240,30 @@
   color: var(--color-ink-80);
   margin-top: 16px;
   line-height: 1.5;
+}
+
+/* Below 768px (see --bp-tablet in tokens.css): the 5-fixed-column tier
+   grid and the side-by-side Location/Category row don't fit a phone
+   viewport at all — both were forcing a horizontal-scroll strip. */
+@media (max-width: 768px) {
+  .page {
+    padding: 24px 20px 40px;
+  }
+
+  .form {
+    padding: 20px;
+  }
+
+  .fieldRow {
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .tierGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .tierGrid3 {
+    grid-template-columns: 1fr;
+  }
 }

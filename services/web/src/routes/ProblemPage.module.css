@@ -771,3 +771,43 @@
   padding: 48px;
   color: var(--color-ink-60);
 }
+
+/* Below 768px (see --bp-tablet in tokens.css): the fixed `1fr 344px`
+   two-column body (feed + right rail) doesn't fit a phone viewport —
+   the right rail (tasks/members/AI summary cards) was getting clipped
+   off-screen instead of stacking below the feed. The tabs row is left
+   horizontally scrollable on purpose rather than wrapped/shrunk (own
+   overflow-x, not a page-level one) since forcing 5+ tab labels to wrap
+   or truncate is worse than a short internal swipe. */
+@media (max-width: 768px) {
+  .header {
+    padding: 20px 20px 16px;
+  }
+
+  .headerRow {
+    flex-wrap: wrap;
+  }
+
+  .headerActions {
+    flex-wrap: wrap;
+  }
+
+  .body {
+    grid-template-columns: 1fr;
+  }
+
+  .feedColumn {
+    padding: 20px 20px 40px;
+    border-right: none;
+  }
+
+  .tabs {
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+
+  .rightRail {
+    padding: 20px;
+    border-top: 1px solid var(--color-line);
+  }
+}

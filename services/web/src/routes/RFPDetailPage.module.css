@@ -260,3 +260,47 @@
   line-height: 1.5;
   font-weight: 500;
 }
+
+/* Below 768px (see --bp-tablet in tokens.css): match rows (title/desc vs
+   score) and the fixed 3-column signal breakdown grid don't fit a phone
+   viewport — both stack instead of forcing a horizontal-scroll strip. */
+@media (max-width: 768px) {
+  .page {
+    padding: 24px 20px 40px;
+  }
+
+  .matchRow {
+    flex-wrap: wrap;
+  }
+
+  .matchSolutionDesc {
+    max-width: none;
+  }
+
+  .matchScoreCol {
+    text-align: left;
+  }
+
+  .rrfHeader {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .rrfExplain {
+    max-width: none;
+  }
+
+  .signalRow {
+    grid-template-columns: 90px 1fr;
+  }
+
+  .signalValue {
+    grid-column: 2;
+    text-align: left;
+  }
+
+  .reqTable {
+    display: block;
+    overflow-x: auto;
+  }
+}

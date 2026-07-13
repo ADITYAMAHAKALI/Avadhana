@@ -199,3 +199,43 @@
 .following {
   margin-left: auto;
 }
+
+/* Below 768px (see --bp-tablet in tokens.css): the search bar + tier
+   chips row, the location/category filter row, and the 2-column card
+   grid were all fixed-width, forcing the whole page into a
+   horizontal-scroll strip instead of stacking/wrapping. */
+@media (max-width: 768px) {
+  .page {
+    padding: 24px 20px 40px;
+  }
+
+  .searchRow {
+    flex-wrap: wrap;
+  }
+
+  .searchBar {
+    flex-basis: 100%;
+  }
+
+  .tierButtons {
+    flex-wrap: wrap;
+  }
+
+  .filterRow {
+    flex-wrap: wrap;
+  }
+
+  .filterInput {
+    width: auto;
+    flex: 1;
+    min-width: 120px;
+  }
+
+  .clearFilters {
+    margin-left: 0;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
